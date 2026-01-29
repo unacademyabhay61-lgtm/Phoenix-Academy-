@@ -61,7 +61,17 @@
         <textarea id="noticeText" placeholder="Write notice..."></textarea>
         <button class="btn btn-yellow" onclick="updateNotice()">Update Notice</button>
     </div>
-
+<div class="admin-card" style="border-color: var(--primary);">
+    <h3 style="color: var(--primary);">📝 Upload Test / Study Notes</h3>
+    <input type="text" id="contentTitle" placeholder="Topic Name (e.g. Physics Ch-1)">
+    <input type="text" id="contentLink" placeholder="Google Drive/PDF Link">
+    <select id="contentType">
+        <option value="test">Exam Test Paper</option>
+        <option value="notes">Chapter Notes</option>
+    </select>
+    <button class="btn btn-blue" onclick="uploadContent()">Publish Now</button>
+</div>
+    
     <div class="admin-card">
         <h3 style="color: #fff;">🛠️ Live Class Manager</h3>
         <p style="font-size: 11px; color: #555;">Yahan se purani classes delete karein</p>
