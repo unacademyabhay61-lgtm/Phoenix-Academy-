@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phoenix Academy Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #0b0c0e; --card: #1c1f26; --primary: #3db2ff; --green: #2ecc71; }
+        body { background: var(--bg); color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding-bottom: 90px; overflow-x: hidden; }
+        
+        .header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a2d32; background: #0b0c0e; }
+        .logo-text { font-weight: 800; font-size: 20px; color: #fff; }
+
+        .action-bar { display: flex; gap: 10px; padding: 15px 20px; }
+        .action-btn { flex: 1; background: var(--card); border: 1px solid #2a2d32; padding: 12px; border-radius: 15px; text-align: center; cursor: pointer; }
+        .action-btn span { font-size: 11px; font-weight: 700; color: #888; display: block; margin-top: 4px; }
+
+        .grid-menu { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px 20px; }
+        .menu-item { text-align: center; cursor: pointer; }
+        .icon-box { background: var(--card); height: 55px; width: 55px; border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-size: 22px; border: 1px solid #2a2d32; }
+        .menu-item span { font-size: 10px; color: #888; font-weight: 600; }
+
+        .section-title { padding: 15px 20px 5px; font-size: 16px; font-weight: 800; color: var(--primary); }
+        .list-container { padding: 10px 20px; min-height: 100px; }
+        .item-card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 12px; border: 1px solid #2a2d32; display: flex; align-items: center; }
+        .item-icon { font-size: 22px; margin-right: 15px; }
+        .item-info h4 { margin: 0; font-size: 14px; color: #fff; }
+        .item-info p { margin: 2px 0 0; font-size: 11px; color: #666; }
+
+        .nav-bar { position: fixed; bottom: 0; width: 100%; background: #16181c; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #222; z-index: 1000; }
+        .nav-item { color: #555; text-decoration: none; font-size: 11px; text-align: center; font-weight: bold; }
+        .nav-item.active { color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="logo-text">Phoenix Academy</div>
+        <div style="font-size: 11px; color: var(--green); font-weight: 700; border: 1px solid var(--green); padding: 3px 8px; border-radius: 10px;">OFFLINE BATCH</div>
+    </div>
+
+    <div class="action-bar">
+        <div class="action-btn" onclick="openMaps()"><div>📍</div><span>Location</span></div>
+        <div class="action-btn" onclick="callCoaching()"><div>📞</div><span>Contact</span></div>
+        <div class="action-btn" onclick="openWhatsApp()"><div>💬</div><span>WhatsApp</span></div>
+    </div>
+
+    <div class="grid-menu">
+        <div class="menu-item" onclick="loadData('notes')"><div class="icon-box">📚</div><span>Notes</span></div>
+        <div class="menu-item" onclick="loadData('tests')"><div class="icon-box">📝</div><span>Tests</span></div>
+        <div class="menu-item" onclick="loadData('playlist')"><div class="icon-box">🎬</div><span>Videos</span></div>
+        <div class="menu-item" onclick="alert('Practice sets coming soon!')"><div class="icon-box">⚡</div><span>Practice</span></div>
+    </div>
+
+    <div class="section-title" id="display-title">Academic Notes</div>
+    <div id="display-list" class="list-container">
+        <p style="text-align:center; color:#444;">Syncing data...</p>
+    </div>
+
+    <nav class="nav-bar">
+        <a href="dashboard.html" class="nav-item active">🏠<br>Home</a>
+        <a href="planner.html" class="nav-item">📅<br>Planner</a>
+        <a href="profile.html" class="nav-item">👤<br>Me</a>
+    </nav>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script>
+        // 1. WhatsApp, Call & Maps logic
+        function openWhatsApp() {
+            window.open("https://wa.me/918650953654?text=Hello%20Phoenix%20Academy", "_blank");
+        }
+        function callCoaching() {
+            window.location.href = "tel:+918650953654";
+        }
+        function openMaps() {
+            const addr = "Dev Ashish Divine 2, Block F 402, Narolgam, Ahmedabad";
+            window.open("https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(addr), "_blank");
+        }
+
+        // 2. Initializing Firebase Safely
+        try {
+            const firebaseConfig = {
+                apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDAwIHRYCfT8",
+                authDomain: "phnoenix-coaching.firebaseapp.com",
+                projectId: "phnoenix-coaching",
+                appId: "1:56032052098:web:43d562162215be0eb3459b"
+            };
+            firebase.initializeApp(firebaseConfig);
+            var db = firebase.firestore();
+            console.log("Firebase Initialized");
+        } catch (e) {
+            console.error("Firebase Init Error: ", e);
+            document.getElementById('display-list').innerHTML = "Config Error. Please check Firebase settings.";
+        }
+
+        // 3. Load Data Function
+        function loadData(type) {
+            const list = document.getElementById('display-list');
+            const title = document.getElementById('display-title');
+            title.innerText = type.charAt(0).toUpperCase() + type.slice(1);
+            list.innerHTML = `<p style="text-align:center; color:#555;">Loading ${type}...</p>`;
+
+            if (!db) return;
+
+            db.collection(type).limit(10).get().then((snap) => {
+                list.innerHTML = "";
+                if(snap.empty) {
+                    list.innerHTML = `<p style="text-align:center; color:#444; margin-top:20px;">No ${type} available yet.</p>`;
+                    return;
+                }
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    let icon = type === 'notes' ? '📄' : type === 'tests' ? '✍️' : '▶️';
+                    list.innerHTML += `
+                        <div class="item-card" onclick="window.open('${d.link || d.fileUrl || '#'}')">
+                            <div class="item-icon">${icon}</div>
+                            <div class="item-info">
+                                <h4>${d.title || d.subject || 'New Entry'}</h4>
+                                <p>${d.topic || d.description || 'Phoenix Academy Professional Coaching'}</p>
+                            </div>
+                        </div>`;
+                });
+            }).catch(e => { 
+                console.error(e);
+                list.innerHTML = `<p style="color:red; text-align:center;">Error: Check internet or permissions.</p>`; 
+            });
+        }
+
+        // Initial Load on Page Startup
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => { loadData('notes'); }, 1000);
+        });
+    </script>
+</body>
+</html>

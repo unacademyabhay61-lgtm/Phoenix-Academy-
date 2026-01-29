@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phoenix Academy | Profile</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #0b0c0e; --card: #1c1f26; --primary: #3db2ff; --red: #ff4d4d; }
+        body { background: var(--bg); color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding-bottom: 90px; }
+        
+        .profile-header { background: var(--card); padding: 40px 20px; text-align: center; border-bottom: 1px solid #2a2d32; border-radius: 0 0 30px 30px; }
+        .p-img { width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--primary); object-fit: cover; margin-bottom: 15px; }
+        .p-name { font-size: 22px; font-weight: 800; margin: 5px 0; }
+        .p-email { font-size: 13px; color: #888; }
+
+        .menu-list { padding: 20px; }
+        .menu-item { 
+            background: var(--card); 
+            display: flex; 
+            align-items: center; 
+            padding: 18px; 
+            border-radius: 15px; 
+            margin-bottom: 12px; 
+            text-decoration: none; 
+            color: #fff; 
+            border: 1px solid #2a2d32;
+            transition: 0.2s;
+        }
+        .menu-item:active { transform: scale(0.98); background: #252830; }
+        .m-icon { font-size: 20px; margin-right: 15px; width: 30px; text-align: center; }
+        .m-text { flex: 1; font-weight: 600; font-size: 15px; }
+        .m-arrow { color: #444; font-size: 18px; }
+
+        .logout-btn { color: var(--red) !important; border-color: rgba(255, 77, 77, 0.2); }
+
+        .nav-bar { position: fixed; bottom: 0; width: 100%; background: #16181c; display: flex; justify-content: space-around; padding: 14px 0; border-top: 1px solid #222; }
+        .nav-item { color: #555; text-decoration: none; font-size: 11px; font-weight: 700; text-align: center; }
+        .nav-item.active { color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="profile-header">
+        <img src="https://ui-avatars.com/api/?name=User&background=3db2ff&color=fff" id="user-photo" class="p-img">
+        <div class="p-name" id="user-name">Loading...</div>
+        <div class="p-email" id="user-email">email@example.com</div>
+    </div>
+
+    <div class="menu-list">
+        <a href="edit-profile.html" class="menu-item">
+            <span class="m-icon">👤</span>
+            <span class="m-text">Edit Profile</span>
+            <span class="m-arrow">›</span>
+        </a>
+        <a href="planner.html" class="menu-item">
+            <span class="m-icon">📅</span>
+            <span class="m-text">My Schedule</span>
+            <span class="m-arrow">›</span>
+        </a>
+        <a href="#" class="menu-item">
+            <span class="m-icon">💳</span>
+            <span class="m-text">Fee Receipts</span>
+            <span class="m-arrow">›</span>
+        </a>
+        <a href="#" class="menu-item">
+            <span class="m-icon">⚙️</span>
+            <span class="m-text">Settings</span>
+            <span class="m-arrow">›</span>
+        </a>
+        
+        <a href="#" class="menu-item logout-btn" onclick="logout()">
+            <span class="m-icon">🚪</span>
+            <span class="m-text">Logout</span>
+        </a>
+    </div>
+
+    <nav class="nav-bar">
+        <a href="dashboard.html" class="nav-item">🏠<br>Home</a>
+        <a href="planner.html" class="nav-item">📅<br>Planner</a>
+        <a href="profile.html" class="nav-item active">👤<br>Me</a>
+    </nav>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDAwIHRYCfT8",
+            authDomain: "phnoenix-coaching.firebaseapp.com",
+            projectId: "phnoenix-coaching",
+            appId: "1:56032052098:web:43d562162215be0eb3459b"
+        };
+        firebase.initializeApp(firebaseConfig);
+
+        // Fetch User Data
+        firebase.auth().onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('user-email').innerText = user.email;
+                document.getElementById('user-name').innerText = user.displayName || "Phoenix Student";
+                if(user.photoURL) document.getElementById('user-photo').src = user.photoURL;
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        // Logout Function
+        function logout() {
+            if(confirm("Bhai, logout karna chahte ho?")) {
+                firebase.auth().signOut().then(() => {
+                    window.location.href = "index.html";
+                });
+            }
+        }
+    </script>
+</body>
+</html>

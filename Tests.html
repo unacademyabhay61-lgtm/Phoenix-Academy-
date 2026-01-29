@@ -1,0 +1,23 @@
+<div id="test-list" class="timeline"></div>
+
+<script>
+    function fetchTests() {
+        const list = document.getElementById('test-list');
+        // Firebase mein "tests" naam ka collection banayein
+        db.collection("tests").onSnapshot(snap => {
+            list.innerHTML = "";
+            snap.forEach(doc => {
+                const t = doc.data();
+                list.innerHTML += `
+                    <div class="card" onclick="window.open('${t.link}')">
+                        <div class="time-side">📝</div>
+                        <div class="info">
+                            <div class="title">${t.title}</div>
+                            <div class="teacher-name">Marks: ${t.marks} | Time: ${t.duration}</div>
+                        </div>
+                    </div>`;
+            });
+        });
+    }
+    fetchTests();
+</script>
