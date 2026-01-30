@@ -292,20 +292,22 @@ function deletePoll(id) {
         db.collection("polls").doc(id).delete();
     }
 }
+// --- Sabhi Managers ko ek saath start karne ke liye ---
+window.onload = function() {
+    if (typeof loadClasses === 'function') loadClasses();
+    loadTestManager(); 
+    loadAnalytics();
+};
 
-// Initialize on load
-window.onload = loadTestManager;
-    
-    // Bulk Upload Function - IDs Fixed!
+// 1. Bulk Upload Function
 async function uploadBulkQuiz() {
-    // Screenshot mein id="bulkJson" hai, isliye wahi use kar raha hoon
     const rawData = document.getElementById('bulkJson').value;
     const btn = document.querySelector('.btn-blue[onclick="uploadBulkQuiz()"]');
     
-    if(!rawData.trim()) return alert("Bhai, box khali hai! JSON paste karo.");
+    if(!rawData.trim()) return alert("Bhai, JSON paste toh karo!");
     
     btn.innerText = "⏳ Uploading...";
-    btn.style.opacity = "0.5";
+    btn.disabled = true;
 
     try {
         const questions = JSON.parse(rawData);
@@ -322,70 +324,62 @@ async function uploadBulkQuiz() {
         });
 
         await batch.commit();
-        alert("🎉 Test Live ho gaya! Admin page refresh karo.");
+        alert("🎉 Mubarak ho! Test Live ho gaya.");
         document.getElementById('bulkJson').value = "";
-        location.reload(); // Refresh to see new list
     } catch (e) {
-        alert("❌ JSON Format Galat Hai! Check karo ki saare brackets [] aur {} sahi hain.");
-        console.error(e);
+        alert("❌ JSON Format Galat Hai! Check brackets.");
     } finally {
         btn.innerText = "🚀 UPLOAD 50 QUESTIONS NOW";
-        btn.style.opacity = "1";
+        btn.disabled = false;
     }
 }
 
-// Live Test Manager (Delete logic like classes)
+// 2. Live Test Manager (Delete Function ke saath)
 function loadTestManager() {
     const list = document.getElementById('test-list-admin');
     if(!list) return;
 
     db.collection("polls").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-        list.innerHTML = "";
-        if (snapshot.empty) {
-            list.innerHTML = "<p style='color:#555; font-size:11px; padding:10px;'>Koi test nahi mila.</p>";
-            return;
-        }
-
+        list.innerHTML = snapshot.empty ? "Koi test nahi mila." : "";
         snapshot.forEach((doc) => {
             const data = doc.data();
             list.innerHTML += `
-                <div class="list-item" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; background:#000; padding:10px; border-radius:12px;">
-                    <div style="font-size:12px; color:#fff;">${data.question.substring(0, 35)}...</div>
-                    <button onclick="deletePoll('${doc.id}')" class="btn-red" style="padding:5px 10px; font-size:10px; width:auto; margin:0;">DELETE</button>
+                <div class="list-item" style="display:flex; justify-content:space-between; align-items:center; background:#000; padding:10px; margin-bottom:10px; border-radius:12px; border-left:4px solid #ff4444;">
+                    <div style="font-size:11px; color:#fff;">${data.question.substring(0, 35)}...</div>
+                    <button onclick="deletePoll('${doc.id}')" class="btn-red" style="width:auto; margin:0; padding:5px 10px;">DELETE</button>
                 </div>`;
         });
     });
 }
 
 function deletePoll(id) {
-    if(confirm("Bhai, ye question delete karna hai?")) {
+    if(confirm("Bhai, ye sawal mita du?")) {
         db.collection("polls").doc(id).delete();
     }
 }
 
-// Start loading when page opens
-window.onload = loadTestManager;
-    <div class="admin-card" style="border-color: #ffbc03; margin-top: 20px;">
-    <h3 style="color: #ffbc03;">📊 Student Test Analytics</h3>
-    <div id="analytics-list" style="font-size: 12px; color: #ccc;">Loading records...</div>
-</div>
-
-<script>
+// 3. Student Analytics Logic
 function loadAnalytics() {
+    const div = document.getElementById('analytics-list');
+    if(!div) return;
+
     db.collection("test_results").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-        const div = document.getElementById('analytics-list');
-        div.innerHTML = "";
+        div.innerHTML = snapshot.empty ? "Abhi tak kisi ne test nahi diya." : "";
         snapshot.forEach(doc => {
             const res = doc.data();
-            div.innerHTML += `<div style="padding:8px; border-bottom:1px solid #333;">
-                <b>${res.student}</b>: ${res.score}/${res.total} marks (${res.date})
-            </div>`;
+            div.innerHTML += `
+                <div style="padding:10px; border-bottom:1px solid #222; font-size:11px;">
+                    <b style="color:#3db2ff;">${res.student}</b>: ${res.score}/${res.total} marks <br>
+                    <small style="color:#666;">${res.date}</small>
+                </div>`;
         });
     });
 }
-loadAnalytics();
 </script>
-    
+</body>
+</html>
+
+
 </script>
 </body>
 </html>
