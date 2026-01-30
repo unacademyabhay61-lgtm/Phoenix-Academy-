@@ -7,7 +7,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
-        :root { --primary: #3db2ff; --bg: #0b0f19; --card: #161b22; }
+        :root { --primary: #3db2ff; --bg: #0b0f19; --card: #161b22; --danger: #ff4444; }
         body { margin: 0; font-family: sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; overflow: hidden; }
         .sidebar { width: 85px; background: #0d1117; border-right: 1px solid #1f2937; display: flex; flex-direction: column; align-items: center; padding-top: 25px; gap: 25px; }
         .nav-link { text-decoration: none; color: #9ca3af; font-size: 10px; text-align: center; display: flex; flex-direction: column; gap: 6px; }
@@ -17,11 +17,14 @@
         .main { flex: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; overflow-y: auto; }
         #quiz-container { background: var(--card); width: 100%; max-width: 500px; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin: auto; }
         .option-btn { width: 100%; background: #1c2128; border: 1px solid #333; color: white; padding: 15px; margin-top: 10px; border-radius: 12px; text-align: left; cursor: pointer; transition: 0.3s; font-size: 14px; }
-        .option-btn:hover { border-color: var(--primary); }
         .option-btn.selected { background: var(--primary); color: white; border-color: var(--primary); }
-        #next-btn { background: var(--primary); color: white; border: none; padding: 12px 30px; border-radius: 10px; margin-top: 20px; font-weight: bold; cursor: pointer; display: none; width: 100%; }
+        .nav-btn { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; color: white; }
+        .btn-next { background: var(--primary); }
+        .btn-back { background: #333; }
+        .btn-submit { background: var(--danger); width: 100%; margin-top: 15px; }
         .hidden { display: none; }
         .sol-card { text-align: left; margin-top: 15px; background: #000; padding: 12px; border-radius: 12px; border-left: 4px solid #333; }
+        .class-badge { font-size: 10px; background: #333; padding: 4px 8px; border-radius: 5px; margin-bottom: 10px; display: inline-block; }
     </style>
 </head>
 <body>
@@ -35,16 +38,20 @@
     <div class="main">
         <div id="quiz-container">
             <div id="question-area">
-                <h3 id="q-text">📚 Select a Chapter</h3>
+                <h3 id="q-text">📚 Select Your Class</h3>
                 <div id="options-list"></div>
-                <button id="next-btn" onclick="nextQuestion()">Next Question →</button>
+                <div id="controls" class="hidden" style="display:flex; gap:10px; margin-top:20px;">
+                    <button id="back-btn" class="nav-btn btn-back" onclick="prevQuestion()">← Back</button>
+                    <button id="next-btn" class="nav-btn btn-next" onclick="nextQuestion()">Next →</button>
+                </div>
+                <button id="early-submit" class="nav-btn btn-submit hidden" onclick="confirmSubmit()">Finish & Submit Test</button>
             </div>
 
             <div id="result-area" class="hidden">
                 <h2 style="color:var(--primary)">Test Completed! 🎉</h2>
                 <p id="score-text" style="font-size: 24px; font-weight: bold;"></p>
                 <div id="solutions-container"></div>
-                <button onclick="location.reload()" style="background:var(--primary); color:white; border:none; padding:12px 20px; border-radius:10px; width:100%; margin-top:15px; cursor:pointer;">Restart / Chapters</button>
+                <button onclick="location.reload()" style="background:var(--primary); color:white; border:none; padding:12px 20px; border-radius:10px; width:100%; margin-top:15px; cursor:pointer;">Restart / Home</button>
             </div>
         </div>
     </div>
@@ -61,63 +68,61 @@
 
         let questions = [];
         let currentIdx = 0;
-        let score = 0;
         let userAnswers = [];
         let currentChapter = "";
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const selectedChapter = urlParams.get('chapter');
-
         window.onload = () => {
-            // Identity Prompt Logic
             let identifier = localStorage.getItem("userIdentifier");
-            if (!identifier || identifier === "Guest") {
-                identifier = prompt("Enter your Name or Email to start:");
+            if (!identifier) {
+                identifier = prompt("Enter your Name/Email:");
                 if (!identifier) identifier = "Guest_" + Math.floor(Math.random() * 1000);
                 localStorage.setItem("userIdentifier", identifier);
             }
-
-            if (selectedChapter) { startTest(selectedChapter); } 
-            else { showChapterSelection(); }
+            showClassSelection();
         };
 
-        async function showChapterSelection() {
+        function showClassSelection() {
             const list = document.getElementById('options-list');
-            list.innerHTML = "⏳ Loading Chapters...";
-            const snapshot = await db.collection("polls").get();
-            const chapters = [...new Set(snapshot.docs.map(doc => doc.data().chapter))];
+            const classes = ["9th", "10th", "11th", "12th", "NEET UG"];
             list.innerHTML = "";
+            classes.forEach(cls => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn";
+                btn.innerText = "🏫 Class " + cls;
+                btn.onclick = () => loadChaptersByClass(cls);
+                list.appendChild(btn);
+            });
+        }
+
+        async function loadChaptersByClass(cls) {
+            const list = document.getElementById('options-list');
+            list.innerHTML = "⏳ Loading " + cls + " Tests...";
+            const snapshot = await db.collection("polls").where("targetClass", "==", cls).get();
+            const chapters = [...new Set(snapshot.docs.map(doc => doc.data().chapter))];
+            
+            list.innerHTML = `<button onclick="showClassSelection()" style="background:none; border:none; color:var(--primary); cursor:pointer; margin-bottom:10px;">← Back to Classes</button>`;
+            
+            if(chapters.length === 0) {
+                list.innerHTML += "<p>No tests found for this class.</p>";
+                return;
+            }
+
             chapters.forEach(chap => {
-                if(chap) {
-                    const btn = document.createElement('button');
-                    btn.className = "option-btn";
-                    btn.innerText = "📁 " + chap;
-                    btn.onclick = () => { window.location.href = `tests.html?chapter=${encodeURIComponent(chap)}`; };
-                    list.appendChild(btn);
-                }
+                const btn = document.createElement('button');
+                btn.className = "option-btn";
+                btn.innerText = "📁 " + chap;
+                btn.onclick = () => startTest(chap);
+                list.appendChild(btn);
             });
         }
 
         function startTest(chapter) {
             currentChapter = chapter;
-            questions = []; // Clear previous questions
-            currentIdx = 0;
-            score = 0;
-            userAnswers = [];
-            
-            document.getElementById('q-text').innerText = "Loading " + chapter + "...";
-            
-            // Strictly Filter by Chapter
-            db.collection("polls").where("chapter", "==", chapter).get().then((snapshot) => {
+            db.collection("polls").where("chapter", "==", chapter).get().then(snapshot => {
                 questions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (questions.length > 0) { 
-                    showQuestion(); 
-                } else { 
-                    document.getElementById('q-text').innerText = "No questions found in this chapter!"; 
-                }
-            }).catch(err => {
-                console.error(err);
-                document.getElementById('q-text').innerText = "Error loading questions.";
+                document.getElementById('controls').classList.remove('hidden');
+                document.getElementById('early-submit').classList.remove('hidden');
+                showQuestion();
             });
         }
 
@@ -126,62 +131,72 @@
             document.getElementById('q-text').innerText = `Q${currentIdx + 1}. ${q.question}`;
             const list = document.getElementById('options-list');
             list.innerHTML = "";
-            document.getElementById('next-btn').style.display = "none";
-            
+
             q.options.forEach(opt => {
                 const btn = document.createElement('button');
                 btn.className = "option-btn";
+                if (userAnswers[currentIdx] && userAnswers[currentIdx].picked === opt) btn.classList.add('selected');
                 btn.innerText = opt;
                 btn.onclick = () => {
                     document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
                     btn.classList.add('selected');
                     userAnswers[currentIdx] = { picked: opt, correct: q.answer, qText: q.question };
-                    document.getElementById('next-btn').style.display = "block";
                 };
                 list.appendChild(btn);
             });
+
+            document.getElementById('back-btn').style.visibility = currentIdx === 0 ? "hidden" : "visible";
+            document.getElementById('next-btn').innerText = currentIdx === questions.length - 1 ? "Review & Finish" : "Next →";
         }
 
         function nextQuestion() {
-            if (userAnswers[currentIdx].picked === userAnswers[currentIdx].correct) score++;
-            currentIdx++;
-            if (currentIdx < questions.length) { showQuestion(); } 
-            else { showResult(); }
+            if (currentIdx < questions.length - 1) {
+                currentIdx++;
+                showQuestion();
+            } else {
+                confirmSubmit();
+            }
+        }
+
+        function prevQuestion() {
+            if (currentIdx > 0) {
+                currentIdx--;
+                showQuestion();
+            }
+        }
+
+        function confirmSubmit() {
+            if(confirm("Are you sure you want to submit the test?")) showResult();
         }
 
         async function showResult() {
+            let score = 0;
+            userAnswers.forEach(ans => { if(ans && ans.picked === ans.correct) score++; });
+
             document.getElementById('question-area').classList.add('hidden');
             document.getElementById('result-area').classList.remove('hidden');
             document.getElementById('score-text').innerText = `Score: ${score} / ${questions.length}`;
             
-            const studentId = localStorage.getItem("userIdentifier") || "Guest";
-            
             await db.collection("test_results").add({
-                student: studentId, 
-                score: score, 
+                student: localStorage.getItem("userIdentifier"),
+                score: score,
                 total: questions.length,
-                subject: currentChapter, 
+                subject: currentChapter,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            const btn = document.createElement('button');
-            btn.className = "option-btn";
-            btn.style.background = "#ffbc00";
-            btn.style.color = "#000";
-            btn.innerText = "📝 View Solutions";
-            btn.onclick = viewSolutions;
-            document.getElementById('solutions-container').innerHTML = ""; // Clear
-            document.getElementById('solutions-container').appendChild(btn);
+            viewSolutions();
         }
 
         function viewSolutions() {
-            let html = "";
-            userAnswers.forEach((ans, i) => {
-                const isCorrect = ans.picked === ans.correct;
-                html += `<div class="sol-card" style="border-left-color:${isCorrect ? 'green' : 'red'}">
-                    <b>Q${i+1}.</b> ${ans.qText}<br>
-                    <small style="color:${isCorrect ? 'green' : 'red'}">Your: ${ans.picked || 'Skipped'}</small><br>
-                    <small style="color:green">Correct: ${ans.correct}</small>
+            let html = "<h3>Solutions:</h3>";
+            questions.forEach((q, i) => {
+                const ans = userAnswers[i];
+                const isCorrect = ans && ans.picked === q.answer;
+                html += `<div class="sol-card" style="border-left-color:${isCorrect ? 'green' : (ans ? 'red' : '#555')}">
+                    <b>Q${i+1}.</b> ${q.question}<br>
+                    <small style="color:${isCorrect ? 'green' : 'red'}">Your Answer: ${ans ? ans.picked : 'Skipped'}</small><br>
+                    <small style="color:green">Correct: ${q.answer}</small>
                 </div>`;
             });
             document.getElementById('solutions-container').innerHTML = html;
