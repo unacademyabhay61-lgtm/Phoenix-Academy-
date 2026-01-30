@@ -293,18 +293,18 @@ function deletePoll(id) {
     }
 }
 // --- Sabhi Managers ko ek saath start karne ke liye ---
+// Sirf EK BAAR window.onload rakho
 window.onload = function() {
-    if (typeof loadClasses === 'function') loadClasses();
+    loadClasses();    
     loadTestManager(); 
     loadAnalytics();
 };
 
-// 1. Bulk Upload Function
 async function uploadBulkQuiz() {
-    const rawData = document.getElementById('bulkJson').value;
+    const rawData = document.getElementById('bulkJson').value; // ID check karna 'bulkJson' hi ho
     const btn = document.querySelector('.btn-blue[onclick="uploadBulkQuiz()"]');
     
-    if(!rawData.trim()) return alert("Bhai, JSON paste toh karo!");
+    if(!rawData.trim()) return alert("Bhai, pehle JSON toh dalo!");
     
     btn.innerText = "⏳ Uploading...";
     btn.disabled = true;
@@ -324,62 +324,14 @@ async function uploadBulkQuiz() {
         });
 
         await batch.commit();
-        alert("🎉 Mubarak ho! Test Live ho gaya.");
+        alert("🎉 Success! Questions upload ho gaye.");
         document.getElementById('bulkJson').value = "";
     } catch (e) {
-        alert("❌ JSON Format Galat Hai! Check brackets.");
+        alert("❌ JSON Format Galat hai! Bracket [ ] ya comma , check karo.");
+        console.error(e);
     } finally {
         btn.innerText = "🚀 UPLOAD 50 QUESTIONS NOW";
         btn.disabled = false;
     }
 }
-
-// 2. Live Test Manager (Delete Function ke saath)
-function loadTestManager() {
-    const list = document.getElementById('test-list-admin');
-    if(!list) return;
-
-    db.collection("polls").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-        list.innerHTML = snapshot.empty ? "Koi test nahi mila." : "";
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            list.innerHTML += `
-                <div class="list-item" style="display:flex; justify-content:space-between; align-items:center; background:#000; padding:10px; margin-bottom:10px; border-radius:12px; border-left:4px solid #ff4444;">
-                    <div style="font-size:11px; color:#fff;">${data.question.substring(0, 35)}...</div>
-                    <button onclick="deletePoll('${doc.id}')" class="btn-red" style="width:auto; margin:0; padding:5px 10px;">DELETE</button>
-                </div>`;
-        });
-    });
-}
-
-function deletePoll(id) {
-    if(confirm("Bhai, ye sawal mita du?")) {
-        db.collection("polls").doc(id).delete();
-    }
-}
-
-// 3. Student Analytics Logic
-function loadAnalytics() {
-    const div = document.getElementById('analytics-list');
-    if(!div) return;
-
-    db.collection("test_results").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-        div.innerHTML = snapshot.empty ? "Abhi tak kisi ne test nahi diya." : "";
-        snapshot.forEach(doc => {
-            const res = doc.data();
-            div.innerHTML += `
-                <div style="padding:10px; border-bottom:1px solid #222; font-size:11px;">
-                    <b style="color:#3db2ff;">${res.student}</b>: ${res.score}/${res.total} marks <br>
-                    <small style="color:#666;">${res.date}</small>
-                </div>`;
-        });
-    });
-}
-</script>
-</body>
-</html>
-
-
-</script>
-</body>
-</html>
+    
