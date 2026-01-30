@@ -237,71 +237,16 @@ async function uploadBulkQuiz() {
     
     btn.innerText = "⏳ PROCESSING...";
     btn.disabled = true;
-
-    try {
-        const questions = JSON.parse(rawData);
-        const batch = db.batch();
-
-        questions.forEach((q) => {
-            const docRef = db.collection("polls").doc(); 
-            batch.set(docRef, {
-                question: q.question,
-                options: q.options,
-                answer: q.answer,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        });
-
-        await batch.commit();
-        alert("🎉 Mubarak ho! Saare questions upload ho gaye.");
-        document.getElementById('bulkJsonInput').value = "";
-    } catch (e) {
-        console.error(e);
-        alert("❌ Error: JSON format mein galti hai. Check karo ki saare [ ] aur { } sahi se band hain.");
-    } finally {
-        btn.innerText = "🚀 UPLOAD 50 QUESTIONS NOW";
-        btn.disabled = false;
-    }
-}
-
-// Live Test Manager (Delete Functionality)
-function loadTestManager() {
-    db.collection("polls").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-        const list = document.getElementById('test-list-admin');
-        if (!list) return;
-        list.innerHTML = "";
-        
-        if (snapshot.empty) {
-            list.innerHTML = "<p style='color:#666; font-size:12px;'>Koi test live nahi hai.</p>";
-            return;
-        }
-
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            list.innerHTML += `
-                <div style="background:#000; padding:12px; margin-bottom:10px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; border-left:4px solid #ff4444;">
-                    <div style="font-size:11px; color:#eee;">${data.question.substring(0, 40)}...</div>
-                    <button onclick="deletePoll('${doc.id}')" style="background:#ff4444; color:white; border:none; padding:6px 12px; border-radius:6px; font-size:10px; font-weight:bold; cursor:pointer;">DELETE</button>
-                </div>`;
-        });
-    });
-}
-
-function deletePoll(id) {
-    if(confirm("Pakka delete kar doon?")) {
-        db.collection("polls").doc(id).delete();
-    }
-}
-// --- Sabhi Managers ko ek saath start karne ke liye ---
-// Sirf EK BAAR window.onload rakho
+    // --- Sab Managers ko Start karne ke liye ---
 window.onload = function() {
-    loadClasses();    
-    loadTestManager(); 
+    if(typeof loadClasses === 'function') loadClasses();
+    loadTestManager();
     loadAnalytics();
 };
 
+// 🚀 1. BULK UPLOAD FUNCTION (Fixed)
 async function uploadBulkQuiz() {
-    const rawData = document.getElementById('bulkJson').value; // ID check karna 'bulkJson' hi ho
+    const rawData = document.getElementById('bulkJson').value; 
     const btn = document.querySelector('.btn-blue[onclick="uploadBulkQuiz()"]');
     
     if(!rawData.trim()) return alert("Bhai, pehle JSON toh dalo!");
@@ -327,11 +272,62 @@ async function uploadBulkQuiz() {
         alert("🎉 Success! Questions upload ho gaye.");
         document.getElementById('bulkJson').value = "";
     } catch (e) {
-        alert("❌ JSON Format Galat hai! Bracket [ ] ya comma , check karo.");
-        console.error(e);
+        alert("❌ JSON Format Galat hai! Bracket [ ] check karo.");
     } finally {
         btn.innerText = "🚀 UPLOAD 50 QUESTIONS NOW";
         btn.disabled = false;
     }
 }
-    
+
+// 🛠️ 2. TEST MANAGER & DELETE ALL
+function loadTestManager() {
+    const list = document.getElementById('test-list-admin');
+    if(!list) return;
+
+    db.collection("polls").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+        // Delete All button upar dikhega
+        let deleteAllBtn = snapshot.empty ? "" : `<button onclick="deleteAllQuestions()" class="btn-red" style="width:100%; margin-bottom:15px; background:#ff4444; font-weight:bold;">⚠️ DELETE ALL QUESTIONS</button>`;
+        
+        list.innerHTML = deleteAllBtn;
+        
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            list.innerHTML += `
+                <div class="list-item" style="display:flex; justify-content:space-between; align-items:center; background:#000; padding:10px; margin-bottom:8px; border-radius:12px; border-left:4px solid #ff4444;">
+                    <div style="font-size:11px; color:#fff;">${data.question.substring(0, 30)}...</div>
+                    <button onclick="deletePoll('${doc.id}')" class="btn-red" style="width:auto; margin:0; padding:5px 10px; font-size:10px;">DEL</button>
+                </div>`;
+        });
+    });
+}
+
+function deletePoll(id) {
+    if(confirm("Mita du?")) db.collection("polls").doc(id).delete();
+}
+
+// 🔥 3. DELETE ALL FUNCTION
+async function deleteAllQuestions() {
+    if(!confirm("⚠️ BHAI, SARE QUESTIONS DELETE HO JAYENGE! Sure ho?")) return;
+    const snapshot = await db.collection("polls").get();
+    const batch = db.batch();
+    snapshot.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    alert("💥 Saare questions delete ho gaye!");
+}
+
+// 📊 4. ANALYTICS
+function loadAnalytics() {
+    const div = document.getElementById('analytics-list');
+    if(!div) return;
+    db.collection("test_results").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+        div.innerHTML = snapshot.empty ? "No records." : "";
+        snapshot.forEach(doc => {
+            const res = doc.data();
+            div.innerHTML += `<div style="padding:8px; border-bottom:1px solid #222; font-size:11px;">
+                <b style="color:#3db2ff;">${res.student}</b>: ${res.score}/${res.total} marks</div>`;
+        });
+    });
+}
+</script>
+</body>
+</html>
