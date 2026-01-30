@@ -102,6 +102,23 @@
             document.getElementById('result-area').classList.remove('hidden');
             document.getElementById('score-text').innerText = `Your Score: ${score} / ${questions.length}`;
         }
+        function showResult() {
+    document.getElementById('question-area').classList.add('hidden');
+    document.getElementById('result-area').classList.remove('hidden');
+    document.getElementById('score-text').innerText = `Your Score: ${score} / ${questions.length}`;
+
+    // Analytics Save karne ka logic
+    const userEmail = localStorage.getItem("userEmail") || "Anonymous"; 
+    db.collection("test_results").add({
+        student: userEmail,
+        score: score,
+        total: questions.length,
+        subject: "Life Processes",
+        date: new Date().toLocaleString(),
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+        }
+        
     </script>
 </body>
 </html>
