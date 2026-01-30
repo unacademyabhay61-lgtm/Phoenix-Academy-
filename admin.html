@@ -15,9 +15,11 @@
         input, select, textarea { width: 100%; padding: 12px; background: #000; border: 1px solid #333; color: white; border-radius: 12px; box-sizing: border-box; outline: none; font-size: 14px; margin-bottom: 10px; }
         .btn { width: 100%; padding: 14px; border: none; color: white; font-weight: 700; border-radius: 12px; cursor: pointer; margin-top: 10px; transition: 0.2s; text-transform: uppercase; }
         .btn-blue { background: var(--primary); }
-        .btn-yellow { background: var(--notice); color: #000; }
-        .btn-red { background: var(--danger); font-size: 12px; padding: 8px; width: auto; margin-top: 5px; }
+        .btn-red { background: var(--danger); font-size: 11px; padding: 6px 12px; border-radius: 8px; border:none; color:white; cursor:pointer; }
         .list-item { background: #000; padding: 12px; border-radius: 12px; border-left: 4px solid var(--primary); margin-bottom: 10px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+        .chapter-box { background: #1c2128; padding: 15px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #333; }
+        .hidden { display: none; }
+        .q-detail { font-size: 11px; color: #aaa; margin-top: 5px; padding-left: 10px; border-left: 1px solid #444; }
     </style>
 </head>
 <body>
@@ -27,7 +29,6 @@
 
     <div class="admin-card">
         <h3>🎥 Schedule Class</h3>
-        <label>Teacher</label>
         <select id="teacherName">
             <option value="Abhay Raghuvanshi">Abhay Raghuvanshi Sir</option>
             <option value="Shivani Singh">Shivani Singh Mam</option>
@@ -48,13 +49,13 @@
     <div class="admin-card" style="border-color: #3db2ff;">
         <h3>📝 Create Bulk Test (Polls)</h3>
         <input type="text" id="chapterNameInput" placeholder="Chapter Name (e.g. Life Processes)">
-        <textarea id="bulkJsonInput" placeholder='JSON yahan paste karein...' style="height: 120px;"></textarea>
-        <button class="btn btn-blue" id="bulkUploadBtn" onclick="uploadBulkQuiz()">🚀 UPLOAD 50 QUESTIONS NOW</button>
+        <textarea id="bulkJsonInput" placeholder='JSON yahan paste karein...' style="height: 100px;"></textarea>
+        <button class="btn btn-blue" id="bulkUploadBtn" onclick="uploadBulkQuiz()">🚀 UPLOAD QUESTIONS</button>
     </div>
 
     <div class="admin-card" style="border-color: #ff4444;">
-        <h3 style="color: #ff4444;">🛠️ Live Test Manager</h3>
-        <div id="test-list-admin">Loading tests...</div>
+        <h3 style="color: #ff4444;">📂 Organized Test Manager</h3>
+        <div id="test-groups-container">Loading Chapters...</div>
     </div>
     
     <div class="admin-card">
@@ -81,6 +82,7 @@
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.firestore();
 
+    // --- CLASS LOGIC ---
     function addClass() {
         const data = {
             teacher: document.getElementById('teacherName').value,
@@ -92,102 +94,116 @@
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         if(!data.title || !data.date) return alert("Fill details!");
-        db.collection("classes").add(data).then(() => alert("Class Added!"));
+        db.collection("classes").add(data).then(() => { alert("Class Added!"); location.reload(); });
     }
 
     function loadClasses() {
-        db.collection("classes").orderBy("createdAt", "desc").onSnapshot((snapshot) => {
-            const listDiv = document.getElementById('live-list');
-            listDiv.innerHTML = snapshot.empty ? "No classes." : "";
-            snapshot.forEach((doc) => {
+        db.collection("classes").orderBy("createdAt", "desc").onSnapshot(snap => {
+            const div = document.getElementById('live-list');
+            div.innerHTML = "";
+            snap.forEach(doc => {
                 const cls = doc.data();
-                listDiv.innerHTML += `
-                    <div class="list-item">
-                        <div><b>${cls.title}</b><br><small>${cls.date}</small></div>
-                        <button class="btn-red" onclick="deleteDoc('classes','${doc.id}')">DELETE</button>
-                    </div>`;
+                div.innerHTML += `<div class="list-item">
+                    <span><b>${cls.title}</b><br><small>${cls.date}</small></span>
+                    <button class="btn-red" onclick="deleteDoc('classes','${doc.id}')">DEL</button>
+                </div>`;
             });
         });
     }
 
+    // --- BULK UPLOAD ---
     async function uploadBulkQuiz() {
         const rawData = document.getElementById('bulkJsonInput').value;
         const chapName = document.getElementById('chapterNameInput').value;
-        const btn = document.getElementById('bulkUploadBtn');
-
-        if(!chapName.trim()) return alert("Bhai, Chapter ka naam dalo!");
-        if(!rawData.trim()) return alert("JSON paste karo!");
+        if(!chapName || !rawData) return alert("Details missing!");
         
-        btn.innerText = "⏳ Uploading...";
-        btn.disabled = true;
-
         try {
             const questions = JSON.parse(rawData);
             const batch = db.batch();
-            questions.forEach((q) => {
-                const docRef = db.collection("polls").doc(); 
-                batch.set(docRef, {
-                    ...q,
-                    chapter: chapName,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
+            questions.forEach(q => {
+                const ref = db.collection("polls").doc();
+                batch.set(ref, { ...q, chapter: chapName, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
             });
             await batch.commit();
-            alert("🎉 " + chapName + " Uploaded!");
-            document.getElementById('bulkJsonInput').value = "";
-        } catch (e) {
-            alert("❌ JSON Error!");
-        } finally {
-            btn.innerText = "🚀 UPLOAD 50 QUESTIONS NOW";
-            btn.disabled = false;
-        }
+            alert("Success!");
+            location.reload();
+        } catch(e) { alert("JSON Error!"); }
     }
 
-    function loadTestManager() {
-        db.collection("polls").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-            const list = document.getElementById('test-list-admin');
-            let html = snapshot.empty ? "No tests." : `<button onclick="deleteAllQuestions()" class="btn-red" style="width:100%; margin-bottom:10px;">⚠️ DELETE ALL</button>`;
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                html += `<div class="list-item">
-                    <span><b>(${data.chapter || 'N/A'})</b> ${data.question.substring(0,20)}...</span>
-                    <button class="btn-red" onclick="deleteDoc('polls','${doc.id}')">DEL</button>
-                </div>`;
+    // --- THE NEW GROUPED MANAGER (THE SOLUTION) ---
+    function loadGroupedManager() {
+        db.collection("polls").onSnapshot(snapshot => {
+            const container = document.getElementById('test-groups-container');
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            // Grouping by chapter
+            const groups = data.reduce((acc, obj) => {
+                const key = obj.chapter || "Uncategorized";
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(obj);
+                return acc;
+            }, {});
+
+            container.innerHTML = "";
+            Object.keys(groups).forEach(chapter => {
+                const qList = groups[chapter];
+                const chapterId = chapter.replace(/\s+/g, '');
+                
+                const html = `
+                    <div class="chapter-box">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <b style="color:var(--primary)">📂 ${chapter}</b>
+                            <span style="font-size:10px; background:#333; padding:2px 6px; border-radius:5px;">${qList.length} Qs</span>
+                        </div>
+                        <div style="margin-top:10px; display:flex; gap:5px;">
+                            <button class="btn-red" style="background:#444; flex:1;" onclick="toggleList('${chapterId}')">View Questions</button>
+                            <button class="btn-red" style="flex:1;" onclick="deleteEntireChapter('${chapter}')">Delete Full Test</button>
+                        </div>
+                        <div id="list-${chapterId}" class="hidden" style="margin-top:15px; border-top:1px solid #333; padding-top:10px;">
+                            ${qList.map(q => `
+                                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                                    <span style="font-size:11px;">• ${q.question.substring(0,30)}...</span>
+                                    <button onclick="deleteDoc('polls','${q.id}')" style="background:none; border:none; color:red; cursor:pointer;">✖</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>`;
+                container.innerHTML += html;
             });
-            list.innerHTML = html;
         });
     }
 
-    async function deleteAllQuestions() {
-        if(!confirm("Sure?")) return;
-        const snap = await db.collection("polls").get();
+    function toggleList(id) {
+        const el = document.getElementById('list-' + id);
+        el.classList.toggle('hidden');
+    }
+
+    async function deleteEntireChapter(chapName) {
+        if(!confirm(`Kya aap "${chapName}" ke SARE questions udaana chahte hain?`)) return;
+        const snap = await db.collection("polls").where("chapter", "==", chapName).get();
         const batch = db.batch();
         snap.forEach(doc => batch.delete(doc.ref));
         await batch.commit();
-        alert("Deleted!");
+        alert("Full Test Deleted!");
     }
 
     function loadAnalytics() {
-        db.collection("test_results").orderBy("timestamp", "desc").limit(10).onSnapshot((snapshot) => {
+        db.collection("test_results").orderBy("timestamp", "desc").limit(15).onSnapshot(snap => {
             const div = document.getElementById('analytics-list');
-            div.innerHTML = snapshot.empty ? "No records." : "";
-            snapshot.forEach(doc => {
+            div.innerHTML = "";
+            snap.forEach(doc => {
                 const res = doc.data();
                 div.innerHTML += `<div style="padding:8px; border-bottom:1px solid #222; font-size:11px;">
-                    <b>${res.student}</b>: ${res.score}/${res.total} marks (${res.subject || 'Test'})</div>`;
+                    <b>${res.student}</b>: ${res.score}/${res.total} - <span style="color:var(--primary)">${res.subject}</span></div>`;
             });
         });
     }
 
     function deleteDoc(coll, id) {
-        if(confirm("Mita du?")) db.collection(coll).doc(id).delete();
+        if(confirm("Pakka?")) db.collection(coll).doc(id).delete();
     }
 
-    window.onload = function() {
-        loadClasses();
-        loadTestManager();
-        loadAnalytics();
-    };
+    window.onload = () => { loadClasses(); loadGroupedManager(); loadAnalytics(); };
 </script>
 </body>
 </html>
