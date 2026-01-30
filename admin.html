@@ -72,10 +72,16 @@
     <button class="btn btn-blue" onclick="uploadContent()">Publish Now</button>
 <div class="admin-card" style="border-color: #3db2ff;">
     <h3 style="color: #3db2ff;">📝 Create Bulk Test (Polls)</h3>
-    <p style="font-size: 11px; color: #888;">AI ka JSON yahan paste karo:</p>
-    <textarea id="bulkJson" placeholder='[{"question": "...", "options": ["A", "B"], "answer": "A"}]' style="height: 150px;"></textarea>
-    <button class="btn btn-blue" onclick="uploadBulkQuiz()">🚀 Upload 50 Questions Now</button>
+    <textarea id="bulkJsonInput" placeholder='JSON yahan paste karein...' style="height: 120px;"></textarea>
+    <button class="btn btn-blue" id="bulkUploadBtn" onclick="uploadBulkQuiz()">🚀 UPLOAD 50 QUESTIONS NOW</button>
 </div>
+
+<div class="admin-card" style="border-color: #ff4444; margin-top: 20px;">
+    <h3 style="color: #ff4444;">🛠️ Live Test Manager</h3>
+    <p style="font-size: 11px; color: #888;">Yahan se aap questions delete kar sakte hain.</p>
+    <div id="test-list-admin">Loading tests...</div>
+</div>
+    
     
 </div>
     
