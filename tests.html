@@ -69,6 +69,14 @@
         const selectedChapter = urlParams.get('chapter');
 
         window.onload = () => {
+            // Identity Prompt Logic
+            let identifier = localStorage.getItem("userIdentifier");
+            if (!identifier || identifier === "Guest") {
+                identifier = prompt("Enter your Name or Email to start:");
+                if (!identifier) identifier = "Guest_" + Math.floor(Math.random() * 1000);
+                localStorage.setItem("userIdentifier", identifier);
+            }
+
             if (selectedChapter) { startTest(selectedChapter); } 
             else { showChapterSelection(); }
         };
@@ -84,7 +92,7 @@
                     const btn = document.createElement('button');
                     btn.className = "option-btn";
                     btn.innerText = "📁 " + chap;
-                    btn.onclick = () => { window.location.href = `tests.html?chapter=${chap}`; };
+                    btn.onclick = () => { window.location.href = `tests.html?chapter=${encodeURIComponent(chap)}`; };
                     list.appendChild(btn);
                 }
             });
@@ -92,11 +100,24 @@
 
         function startTest(chapter) {
             currentChapter = chapter;
+            questions = []; // Clear previous questions
+            currentIdx = 0;
+            score = 0;
+            userAnswers = [];
+            
             document.getElementById('q-text').innerText = "Loading " + chapter + "...";
+            
+            // Strictly Filter by Chapter
             db.collection("polls").where("chapter", "==", chapter).get().then((snapshot) => {
                 questions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (questions.length > 0) { showQuestion(); } 
-                else { document.getElementById('q-text').innerText = "No questions found!"; }
+                if (questions.length > 0) { 
+                    showQuestion(); 
+                } else { 
+                    document.getElementById('q-text').innerText = "No questions found in this chapter!"; 
+                }
+            }).catch(err => {
+                console.error(err);
+                document.getElementById('q-text').innerText = "Error loading questions.";
             });
         }
 
@@ -106,6 +127,7 @@
             const list = document.getElementById('options-list');
             list.innerHTML = "";
             document.getElementById('next-btn').style.display = "none";
+            
             q.options.forEach(opt => {
                 const btn = document.createElement('button');
                 btn.className = "option-btn";
@@ -132,10 +154,14 @@
             document.getElementById('result-area').classList.remove('hidden');
             document.getElementById('score-text').innerText = `Score: ${score} / ${questions.length}`;
             
-            const userEmail = localStorage.getItem("userEmail") || "Guest";
+            const studentId = localStorage.getItem("userIdentifier") || "Guest";
+            
             await db.collection("test_results").add({
-                student: userEmail, score, total: questions.length,
-                subject: currentChapter, timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                student: studentId, 
+                score: score, 
+                total: questions.length,
+                subject: currentChapter, 
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
             const btn = document.createElement('button');
@@ -144,6 +170,7 @@
             btn.style.color = "#000";
             btn.innerText = "📝 View Solutions";
             btn.onclick = viewSolutions;
+            document.getElementById('solutions-container').innerHTML = ""; // Clear
             document.getElementById('solutions-container').appendChild(btn);
         }
 
@@ -153,37 +180,12 @@
                 const isCorrect = ans.picked === ans.correct;
                 html += `<div class="sol-card" style="border-left-color:${isCorrect ? 'green' : 'red'}">
                     <b>Q${i+1}.</b> ${ans.qText}<br>
-                    <small style="color:${isCorrect ? 'green' : 'red'}">Your: ${ans.picked}</small><br>
+                    <small style="color:${isCorrect ? 'green' : 'red'}">Your: ${ans.picked || 'Skipped'}</small><br>
                     <small style="color:green">Correct: ${ans.correct}</small>
                 </div>`;
             });
             document.getElementById('solutions-container').innerHTML = html;
         }
-        function startTest(chapter) {
-    currentChapter = chapter;
-    document.getElementById('q-text').innerText = "Loading " + chapter + "...";
-    
-    // Agar chapter "All" hai toh saare dikhao, nahi toh filter karo
-    let query = db.collection("polls");
-    if (chapter !== "All Questions") {
-        query = query.where("chapter", "==", chapter);
-    }
-
-    query.get().then((snapshot) => {
-        questions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (questions.length > 0) { 
-            showQuestion(); 
-        } else { 
-            // Backup: Agar chapter match na ho toh saare sawal load kar lo
-            db.collection("polls").limit(10).get().then(snap => {
-                questions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                showQuestion();
-            });
-        }
-    });
-        }
-        
     </script>
 </body>
 </html>
-
