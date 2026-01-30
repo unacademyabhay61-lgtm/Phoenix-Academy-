@@ -79,3 +79,17 @@
           if(snapshot.empty) {
               nList.innerHTML = "<p style='text-align:center; font-size
                   
+// Notes wale page ke liye code
+db.collection("academy_content").where("type", "==", "notes").onSnapshot((snapshot) => {
+    const notesDiv = document.getElementById('notes-display-area'); // Check your ID
+    notesDiv.innerHTML = "";
+    snapshot.forEach((doc) => {
+        let n = doc.data();
+        notesDiv.innerHTML += `
+            <div class="note-card">
+                <h4>${n.title}</h4>
+                <a href="${n.link}" target="_blank">View Diagram PDF</a>
+            </div>`;
+    });
+});
+              
