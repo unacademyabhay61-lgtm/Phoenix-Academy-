@@ -8,13 +8,11 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
         body { margin: 0; font-family: sans-serif; background: #0b0f19; color: white; display: flex; height: 100vh; }
-        /* Sidebar Styling */
         .sidebar { width: 85px; background: #0d1117; border-right: 1px solid #1f2937; display: flex; flex-direction: column; align-items: center; padding-top: 25px; gap: 25px; }
         .nav-link { text-decoration: none; color: #9ca3af; font-size: 10px; text-align: center; display: flex; flex-direction: column; gap: 6px; cursor: pointer; }
         .nav-link.active { color: #3db2ff; }
         .icon-box { width: 42px; height: 42px; background: #161b22; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1px solid transparent; }
         .active .icon-box { background: rgba(61, 178, 255, 0.1); border-color: #3db2ff; color: #3db2ff; }
-
         .main { flex: 1; padding: 20px; overflow-y: auto; }
         .class-card { background: #161b22; padding: 18px; border-radius: 15px; margin-bottom: 12px; border-left: 4px solid #3db2ff; }
         .class-name { font-size: 17px; font-weight: bold; color: #f3f4f6; margin-bottom: 4px; }
@@ -26,7 +24,7 @@
 <body>
 
     <div class="sidebar">
-        <a onclick="window.history.back()" class="nav-link">
+        <a href="dashboard.html" class="nav-link">
             <div class="icon-box">📊</div><span>Dash</span>
         </a>
         <a href="planner.html" class="nav-link active">
@@ -47,5 +45,37 @@
 
     <script>
         const firebaseConfig = {
-            apiKey: "AIzaSyA7MHXGS
-                
+            apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDaWIHRYCfT8",
+            authDomain: "phnoenix-coaching.firebaseapp.com",
+            projectId: "phnoenix-coaching",
+            appId: "1:56032052098:web:43d562162215be0eb3459b"
+        };
+        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+        const db = firebase.firestore();
+
+        db.collection("classes").onSnapshot((snapshot) => {
+            const list = document.getElementById('schedule-list');
+            list.innerHTML = "";
+            if (snapshot.empty) { list.innerHTML = "<p style='text-align:center; color:gray;'>No classes today.</p>"; return; }
+
+            snapshot.forEach((doc) => {
+                let d = doc.data();
+                // Har field check kar raha hoon taaki teacher ka original title hi aaye
+                let title = d.classTitle || d.title || d.className || d.topic || "Class Scheduled";
+                let teacher = d.educatorName || d.teacher || "Phoenix Faculty";
+
+                list.innerHTML += `
+                    <div class="class-card">
+                        <div class="class-name">${title}</div>
+                        <div class="educator-name">👨‍🏫 ${teacher}</div>
+                        <div class="class-meta">
+                            <span>📅 ${d.classDate || ''}</span>
+                            <span>⏰ ${d.classTime || ''}</span>
+                        </div>
+                        <a href="${d.classLink || '#'}" target="_blank" class="btn-join">JOIN CLASS →</a>
+                    </div>`;
+            });
+        });
+    </script>
+</body>
+</html>
