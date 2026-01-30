@@ -238,7 +238,13 @@ function loadAnalytics() {
 function deleteDoc(collection, id) {
     if(confirm("Bhai, pakka mita du?")) {
         db.collection(collection).doc(id).delete();
-    }
+    }// Ye code Line 241 par paste karein
+window.onload = function() {
+    loadTestManager(); // Tests load karega
+    loadAnalytics();   // Student record load karega
+    console.log("All systems online!");
+};
+    
 }
 </script>
 </body>
