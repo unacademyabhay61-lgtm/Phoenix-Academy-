@@ -147,102 +147,7 @@
                     </div>
                     <button class="btn-red" onclick="deleteClass('${doc.id}')">DELETE</button>
                 </div>
-            `;
-        });
-    });
 
-    function deleteClass(id) {
-        if(confirm("Bhai, kya aap ise pakka delete karna chahte ho?")) {
-            db.collection("classes").doc(id).delete().then(() => alert("Deleted!"));
-        }
-    }// DELETE LOGIC FOR TESTS/NOTES
-db.collection("academy_content").onSnapshot((snapshot) => {
-    const listDiv = document.getElementById('content-list');
-    listDiv.innerHTML = "";
-    snapshot.forEach((doc) => {
-        let item = doc.data();
-        listDiv.innerHTML += `
-            <div class="list-item" style="display:flex; justify-content:space-between; align-items:center; background:#111; padding:10px; margin-bottom:5px; border-radius:8px;">
-                <div>
-                    <b>${item.title}</b> <br>
-                    <small style="color:var(--primary);">${item.type}</small>
-                </div>
-                <button class="btn-red" onclick="deleteContent('${doc.id}')" style="width:auto; padding:5px 10px;">DELETE</button>
-            </div>`;
-    });
-});
-
-async function deleteContent(id) {
-    if(confirm("Bhai, kya sach mein ise delete karna hai?")) {
-        try {
-            await db.collection("academy_content").doc(id).delete();
-            alert("Hata diya gaya!");
-        } catch (error) {
-            alert("Error: " + error.message);
-        }
-    }
-}
-// 6. UPLOAD TEST OR NOTES LOGIC
-async function uploadContent() {
-    const title = document.getElementById('contentTitle').value;
-    const link = document.getElementById('contentLink').value;
-    const type = document.getElementById('contentType').value;
-
-    if(!title || !link) return alert("Bhai, Title aur Link dono bharo!");
-
-    try {
-        await db.collection("academy_content").add({
-            title: title,
-            link: link,
-            type: type,
-            date: new Date().toLocaleDateString()
-        });
-        alert("Shabaash! Upload ho gaya.");
-        // Boxes ko khali karne ke liye
-        document.getElementById('contentTitle').value = '';
-        document.getElementById('contentLink').value = '';
-    } catch (error) {
-        alert("Galti hui: " + error.message);
-    }
-}async function uploadContent() {
-    const title = document.getElementById('contentTitle').value;
-    const link = document.getElementById('contentLink').value;
-    const type = document.getElementById('contentType').value;
-
-    if(!title || !link) {
-        alert("Bhai, Title aur Link dono bharna zaroori hai!");
-        return;
-    }
-
-    try {
-        await db.collection("academy_content").add({
-            title: title,
-            link: link,
-            type: type,
-            date: new Date().toLocaleDateString()
-        });
-        alert("Shabaash! Upload ho gaya.");
-        document.getElementById('contentTitle').value = '';
-        document.getElementById('contentLink').value = '';
-    } catch (error) {
-        alert("Galti hui: " + error.message);
-    }
-}
-    // Bulk Upload Function with Error Catching
-async function uploadBulkQuiz() {
-    const rawData = document.getElementById('bulkJsonInput').value;
-    const btn = document.getElementById('bulkUploadBtn');
-    
-    if(!rawData.trim()) return alert("Bhai, box khali hai! JSON paste toh karo.");
-    
-    btn.innerText = "⏳ PROCESSING...";
-    btn.disabled = true;
-    // --- Sab Managers ko Start karne ke liye ---
-window.onload = function() {
-    if(typeof loadClasses === 'function') loadClasses();
-    loadTestManager();
-    loadAnalytics();
-};
 
 // 🚀 1. BULK UPLOAD FUNCTION (Fixed)
 async function uploadBulkQuiz() {
@@ -303,9 +208,7 @@ function loadTestManager() {
 
 function deletePoll(id) {
     if(confirm("Mita du?")) db.collection("polls").doc(id).delete();
-}
-
-// 🔥 3. DELETE ALL FUNCTION
+// --- 3. DELETE ALL FUNCTION ---
 async function deleteAllQuestions() {
     if(!confirm("⚠️ BHAI, SARE QUESTIONS DELETE HO JAYENGE! Sure ho?")) return;
     const snapshot = await db.collection("polls").get();
@@ -315,18 +218,27 @@ async function deleteAllQuestions() {
     alert("💥 Saare questions delete ho gaye!");
 }
 
-// 📊 4. ANALYTICS
+// --- 4. STUDENT ANALYTICS LOGIC ---
 function loadAnalytics() {
     const div = document.getElementById('analytics-list');
     if(!div) return;
     db.collection("test_results").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-        div.innerHTML = snapshot.empty ? "No records." : "";
+        div.innerHTML = snapshot.empty ? "No records found." : "";
         snapshot.forEach(doc => {
             const res = doc.data();
-            div.innerHTML += `<div style="padding:8px; border-bottom:1px solid #222; font-size:11px;">
-                <b style="color:#3db2ff;">${res.student}</b>: ${res.score}/${res.total} marks</div>`;
+            div.innerHTML += `<div style="padding:10px; border-bottom:1px solid #222; font-size:11px;">
+                <b style="color:#3db2ff;">${res.student}</b>: ${res.score}/${res.total} marks <br>
+                <small style="color:#666;">${res.date}</small>
+            </div>`;
         });
     });
+}
+
+// --- 5. UNIVERSAL DELETE FOR CLASSES ---
+function deleteDoc(collection, id) {
+    if(confirm("Bhai, pakka mita du?")) {
+        db.collection(collection).doc(id).delete();
+    }
 }
 </script>
 </body>
