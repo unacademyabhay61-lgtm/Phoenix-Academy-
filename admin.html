@@ -76,7 +76,11 @@
         <h3 style="color: #fff;">🛠️ Live Class Manager</h3>
         <p style="font-size: 11px; color: #555;">Yahan se purani classes delete karein</p>
         <div id="live-list">Loading classes...</div>
+    </div><div class="admin-card" style="margin-top: 15px;">
+    <h3 style="color: #fff;">📁 Manage Uploads</h3>
+    <div id="content-list">Loading items...</div>
     </div>
+    
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -138,7 +142,34 @@
         if(confirm("Bhai, kya aap ise pakka delete karna chahte ho?")) {
             db.collection("classes").doc(id).delete().then(() => alert("Deleted!"));
         }
+    }// DELETE LOGIC FOR TESTS/NOTES
+db.collection("academy_content").onSnapshot((snapshot) => {
+    const listDiv = document.getElementById('content-list');
+    listDiv.innerHTML = "";
+    snapshot.forEach((doc) => {
+        let item = doc.data();
+        listDiv.innerHTML += `
+            <div class="list-item" style="display:flex; justify-content:space-between; align-items:center; background:#111; padding:10px; margin-bottom:5px; border-radius:8px;">
+                <div>
+                    <b>${item.title}</b> <br>
+                    <small style="color:var(--primary);">${item.type}</small>
+                </div>
+                <button class="btn-red" onclick="deleteContent('${doc.id}')" style="width:auto; padding:5px 10px;">DELETE</button>
+            </div>`;
+    });
+});
+
+async function deleteContent(id) {
+    if(confirm("Bhai, kya sach mein ise delete karna hai?")) {
+        try {
+            await db.collection("academy_content").doc(id).delete();
+            alert("Hata diya gaya!");
+        } catch (error) {
+            alert("Error: " + error.message);
+        }
     }
+}
+    
 </script>
 </body>
 </html>
