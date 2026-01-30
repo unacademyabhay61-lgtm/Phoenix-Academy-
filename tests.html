@@ -20,4 +20,18 @@
         });
     }
     fetchTests();
+    db.collection("academy_content").where("type", "==", "test").onSnapshot((snapshot) => {
+    let testList = document.getElementById('test-list'); // Apni ID check kar lena
+    testList.innerHTML = "";
+    snapshot.forEach((doc) => {
+        let data = doc.data();
+        testList.innerHTML += `
+            <div class="test-card">
+                <h4>${data.title}</h4>
+                <p>Date: ${data.date}</p>
+                <a href="${data.link}" target="_blank" class="btn">View Test</a>
+            </div>`;
+    });
+});
+    
 </script>
