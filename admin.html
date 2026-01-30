@@ -192,7 +192,31 @@ async function uploadContent() {
     } catch (error) {
         alert("Galti hui: " + error.message);
     }
+}async function uploadContent() {
+    const title = document.getElementById('contentTitle').value;
+    const link = document.getElementById('contentLink').value;
+    const type = document.getElementById('contentType').value;
+
+    if(!title || !link) {
+        alert("Bhai, Title aur Link dono bharna zaroori hai!");
+        return;
+    }
+
+    try {
+        await db.collection("academy_content").add({
+            title: title,
+            link: link,
+            type: type,
+            date: new Date().toLocaleDateString()
+        });
+        alert("Shabaash! Upload ho gaya.");
+        document.getElementById('contentTitle').value = '';
+        document.getElementById('contentLink').value = '';
+    } catch (error) {
+        alert("Galti hui: " + error.message);
+    }
 }
+    
     
 </script>
 </body>
