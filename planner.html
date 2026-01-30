@@ -4,84 +4,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body { background: #0b0f19; color: white; font-family: sans-serif; padding: 15px; }
-        .tab-bar { display: flex; overflow-x: auto; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
-        .tab-item { background: #1c2128; color: #888; border: none; padding: 8px 16px; border-radius: 20px; white-space: nowrap; font-size: 14px; }
-        .tab-item.active { background: #ffbc00; color: black; font-weight: bold; }
-        .card { background: #161b22; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 5px solid #ffbc00; }
-        .notes-section { background: #0d1117; padding: 10px; border-radius: 10px; border: 1px dashed #3db2ff; margin-top: 30px; }
-        .note-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #222; }
-        .btn-link { color: #3db2ff; text-decoration: none; font-weight: bold; }
+        .tab-bar { display: flex; overflow-x: auto; gap: 10px; margin-bottom: 20px; }
+        .tab { background: #1c2128; color: #888; border: none; padding: 8px 15px; border-radius: 20px; white-space: nowrap; }
+        .tab.active { background: #ffbc00; color: black; font-weight: bold; }
+        .class-card { background: #161b22; padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 5px solid #ffbc00; }
     </style>
 </head>
 <body>
-
     <h2 style="text-align: center; color: #ffbc00;">Academic Planner</h2>
-
+    
     <div class="tab-bar">
-        <button class="tab-item active">All Classes</button>
-        <button class="tab-item">Class 10th</button>
-        <button class="tab-item">Class 12th</button>
+        <button class="tab active">All Classes</button>
+        <button class="tab">Class 10th</button>
+        <button class="tab">Class 12th</button>
     </div>
 
     <div id="live-list">
-        <p style="text-align:center; color:gray;">Connecting to Database...</p>
-    </div>
-
-    <div class="notes-section">
-        <h3 style="color: #3db2ff; margin-top: 0;">📚 Study Notes & Diagrams</h3>
-        <div id="notes-list">
-            <p style="text-align:center; color:gray; font-size:12px;">Looking for notes...</p>
-        </div>
+        <p style="text-align:center; color:gray;">Loading classes...</p>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
-      // Firebase Config
       const firebaseConfig = {
         apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDaWIHRYCfT8",
         authDomain: "phnoenix-coaching.firebaseapp.com",
         projectId: "phnoenix-coaching",
         appId: "1:56032052098:web:43d562162215be0eb3459b"
       };
-      
-      if (!firebase.apps.length) {
-          firebase.initializeApp(firebaseConfig);
-      }
+      if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
       const db = firebase.firestore();
 
-      // LOGIC 1: FETCH CLASSES (Aapka purana data)
-      // Check karein ki aapka collection 'classes' hi tha na?
+      // SIRF CLASSES FETCH KARO (Purana Logic)
       db.collection("classes").onSnapshot((snapshot) => {
           const list = document.getElementById('live-list');
           list.innerHTML = "";
-          if(snapshot.empty) {
-              list.innerHTML = "<p style='text-align:center;'>No classes found in database.</p>";
-              return;
-          }
           snapshot.forEach((doc) => {
               let c = doc.data();
               list.innerHTML += `
-                  <div class="card">
-                      <h4 style="margin:0;">${c.className || 'Scheduled Class'}</h4>
-                      <p style="font-size:12px; color:#aaa; margin:5px 0;">${c.classDate || ''} | ${c.classTime || ''}</p>
+                  <div class="class-card">
+                      <h4 style="margin:0;">${c.className || 'New Class'}</h4>
+                      <p style="font-size:12px; color:#aaa;">${c.classDate} | ${c.classTime}</p>
                   </div>`;
- // Planner mein sirf purani classes load karne ke liye
-db.collection("classes").onSnapshot((snapshot) => {
-    const list = document.getElementById('live-list');
-    list.innerHTML = "";
-    if(snapshot.empty) {
-        list.innerHTML = "<p>Bhai, abhi koi class scheduled nahi hai.</p>";
-        return;
-    }
-    snapshot.forEach((doc) => {
-        let c = doc.data();
-        list.innerHTML += `
-            <div class="card">
-                <h4>${c.className}</h4>
-                <p>${c.classDate} | ${c.classTime}</p>
-            </div>`;
-    });
-});
-              
+          });
+      });
+    </script>
+</body>
+</html>
