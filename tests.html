@@ -1,4 +1,43 @@
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
 <script>
+  // 2. Firebase ko connect karo (Admin wala config)
+  const firebaseConfig = {
+    apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDaWIHRYCfT8",
+    authDomain: "phnoenix-coaching.firebaseapp.com",
+    projectId: "phnoenix-coaching",
+    appId: "1:56032052098:web:43d562162215be0eb3459b"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // 3. Ab data dikhane ka logic (Jo aapne pehle dala tha)
+  db.collection("academy_content").onSnapshot((snapshot) => {
+      const testList = document.getElementById('test-list');
+      if(!testList) return; // Agar ID nahi mili toh ruk jao
+      
+      testList.innerHTML = ""; 
+      
+      if(snapshot.empty) {
+          testList.innerHTML = "<p style='text-align:center; color:white;'>Abhi koi content nahi hai.</p>";
+          return;
+      }
+
+      snapshot.forEach((doc) => {
+          let data = doc.data();
+          testList.innerHTML += `
+              <div class="test-card" style="background:#1a1a1a; padding:15px; border-radius:12px; margin-bottom:15px; border-left:4px solid #3db2ff; color:white;">
+                  <h4 style="margin:0;">${data.title}</h4>
+                  <p style="font-size:12px; color:#888;">Type: ${data.type} | Date: ${data.date}</p>
+                  <a href="${data.link}" target="_blank" style="display:inline-block; margin-top:10px; background:#3db2ff; color:white; padding:8px 15px; border-radius:5px; text-decoration:none;">VIEW NOW →</a>
+              </div>`;
+      });
+  });
+</script>
+
+<div id="test-list" style="padding:10px;"></div>
+
   // 1. Database se Tests dikhane ka logic
   db.collection("academy_content").onSnapshot((snapshot) => {
       const testList = document.getElementById('test-list');
