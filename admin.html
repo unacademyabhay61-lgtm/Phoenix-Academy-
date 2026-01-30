@@ -47,6 +47,7 @@
 
     <div class="admin-card" style="border-color: #3db2ff;">
         <h3>📝 Create Bulk Test (Polls)</h3>
+        <input type="text" id="chapterNameInput" placeholder="Chapter Name (e.g. Life Processes)">
         <textarea id="bulkJsonInput" placeholder='JSON yahan paste karein...' style="height: 120px;"></textarea>
         <button class="btn btn-blue" id="bulkUploadBtn" onclick="uploadBulkQuiz()">🚀 UPLOAD 50 QUESTIONS NOW</button>
     </div>
@@ -55,7 +56,6 @@
         <h3 style="color: #ff4444;">🛠️ Live Test Manager</h3>
         <div id="test-list-admin">Loading tests...</div>
     </div>
-<input type="text" id="chapterNameInput" placeholder="Chapter Name (e.g. Life Processes)" style="margin-bottom: 10px;">
     
     <div class="admin-card">
         <h3>🛠️ Live Class Manager</h3>
@@ -72,7 +72,6 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
 <script>
-    // 1. Firebase Configuration
     const firebaseConfig = {
         apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDAwIHRYCfT8",
         authDomain: "phnoenix-coaching.firebaseapp.com",
@@ -82,7 +81,6 @@
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.firestore();
 
-    // 2. Class Logic
     function addClass() {
         const data = {
             teacher: document.getElementById('teacherName').value,
@@ -111,59 +109,40 @@
             });
         });
     }
-// --- 3. Bulk Upload (Chapter System ke saath) ---
-async function uploadBulkQuiz() {
-    const rawData = document.getElementById('bulkJsonInput').value;
-    const chapName = document.getElementById('chapterNameInput') ? document.getElementById('chapterNameInput').value : "General";
-    const btn = document.getElementById('bulkUploadBtn');
 
-    if(!rawData.trim()) return alert("Bhai, pehle JSON toh dalo!");
-    
-    btn.innerText = "⏳ Uploading...";
-    btn.disabled = true;
+    async function uploadBulkQuiz() {
+        const rawData = document.getElementById('bulkJsonInput').value;
+        const chapName = document.getElementById('chapterNameInput').value;
+        const btn = document.getElementById('bulkUploadBtn');
 
-    try {
-        const questions = JSON.parse(rawData);
-        const batch = db.batch();
+        if(!chapName.trim()) return alert("Bhai, Chapter ka naam dalo!");
+        if(!rawData.trim()) return alert("JSON paste karo!");
+        
+        btn.innerText = "⏳ Uploading...";
+        btn.disabled = true;
 
-        questions.forEach((q) => {
-            const docRef = db.collection("polls").doc(); 
-            batch.set(docRef, {
-                question: q.question,
-                options: q.options,
-                answer: q.answer,
-                chapter: chapName, // Har sawal ke saath chapter name save hoga
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        try {
+            const questions = JSON.parse(rawData);
+            const batch = db.batch();
+            questions.forEach((q) => {
+                const docRef = db.collection("polls").doc(); 
+                batch.set(docRef, {
+                    ...q,
+                    chapter: chapName,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
             });
-        });
-
-        await batch.commit();
-        alert("🎉 Mubarak ho! " + chapName + " ke questions upload ho gaye.");
-        document.getElementById('bulkJsonInput').value = "";
-    } catch (e) {
-        console.error(e);
-        alert("❌ JSON Format mein galti hai! Check karo.");
-    } finally {
-        btn.innerText = "🚀 UPLOAD 50 QUESTIONS NOW";
-        btn.disabled = false;
-    }
-}
-    
-
-        await batch.commit();
-        alert("🎉 " + chapName + " ke questions upload ho gaye!");
-        document.getElementById('bulkJsonInput').value = "";
-    } catch (e) {
-        alert("❌ JSON Error! Format check karo.");
-    } finally {
-        btn.innerText = "🚀 UPLOAD 50 QUESTIONS NOW";
-        btn.disabled = false;
-    }
-}
-    
+            await batch.commit();
+            alert("🎉 " + chapName + " Uploaded!");
+            document.getElementById('bulkJsonInput').value = "";
+        } catch (e) {
+            alert("❌ JSON Error!");
+        } finally {
+            btn.innerText = "🚀 UPLOAD 50 QUESTIONS NOW";
+            btn.disabled = false;
+        }
     }
 
-    // 4. Test Manager
     function loadTestManager() {
         db.collection("polls").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
             const list = document.getElementById('test-list-admin');
@@ -171,7 +150,7 @@ async function uploadBulkQuiz() {
             snapshot.forEach((doc) => {
                 const data = doc.data();
                 html += `<div class="list-item">
-                    <span>${data.question.substring(0,25)}...</span>
+                    <span><b>(${data.chapter || 'N/A'})</b> ${data.question.substring(0,20)}...</span>
                     <button class="btn-red" onclick="deleteDoc('polls','${doc.id}')">DEL</button>
                 </div>`;
             });
@@ -180,7 +159,7 @@ async function uploadBulkQuiz() {
     }
 
     async function deleteAllQuestions() {
-        if(!confirm("Sure? Everything will be deleted!")) return;
+        if(!confirm("Sure?")) return;
         const snap = await db.collection("polls").get();
         const batch = db.batch();
         snap.forEach(doc => batch.delete(doc.ref));
@@ -188,7 +167,6 @@ async function uploadBulkQuiz() {
         alert("Deleted!");
     }
 
-    // 5. Analytics
     function loadAnalytics() {
         db.collection("test_results").orderBy("timestamp", "desc").limit(10).onSnapshot((snapshot) => {
             const div = document.getElementById('analytics-list');
@@ -196,17 +174,15 @@ async function uploadBulkQuiz() {
             snapshot.forEach(doc => {
                 const res = doc.data();
                 div.innerHTML += `<div style="padding:8px; border-bottom:1px solid #222; font-size:11px;">
-                    <b>${res.student}</b>: ${res.score}/${res.total} marks</div>`;
+                    <b>${res.student}</b>: ${res.score}/${res.total} marks (${res.subject || 'Test'})</div>`;
             });
         });
     }
 
-    // 6. Universal Delete
     function deleteDoc(coll, id) {
         if(confirm("Mita du?")) db.collection(coll).doc(id).delete();
     }
 
-    // 🚀 Master Switch - Starts everything on Load
     window.onload = function() {
         loadClasses();
         loadTestManager();
