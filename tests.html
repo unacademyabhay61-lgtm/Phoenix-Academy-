@@ -7,20 +7,22 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
-        body { margin: 0; font-family: sans-serif; background: #0b0f19; color: white; display: flex; height: 100vh; }
+        :root { --primary: #3db2ff; --bg: #0b0f19; --card: #161b22; }
+        body { margin: 0; font-family: sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; overflow: hidden; }
         .sidebar { width: 85px; background: #0d1117; border-right: 1px solid #1f2937; display: flex; flex-direction: column; align-items: center; padding-top: 25px; gap: 25px; }
         .nav-link { text-decoration: none; color: #9ca3af; font-size: 10px; text-align: center; display: flex; flex-direction: column; gap: 6px; }
-        .nav-link.active { color: #3db2ff; }
+        .nav-link.active { color: var(--primary); }
         .icon-box { width: 42px; height: 42px; background: #161b22; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        .active .icon-box { background: rgba(61, 178, 255, 0.1); border: 1px solid #3db2ff; color: #3db2ff; }
+        .active .icon-box { background: rgba(61, 178, 255, 0.1); border: 1px solid var(--primary); color: var(--primary); }
 
-        .main { flex: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        #quiz-container { background: #161b22; width: 100%; max-width: 500px; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .option-btn { width: 100%; background: #1c2128; border: 1px solid #333; color: white; padding: 15px; margin-top: 10px; border-radius: 12px; text-align: left; cursor: pointer; transition: 0.3s; }
-        .option-btn:hover { border-color: #3db2ff; background: #252d38; }
-        .option-btn.selected { background: #3db2ff; color: white; border-color: #3db2ff; }
-        #next-btn { background: #3db2ff; color: white; border: none; padding: 12px 30px; border-radius: 10px; margin-top: 20px; font-weight: bold; cursor: pointer; display: none; }
+        .main { flex: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; overflow-y: auto; }
+        #quiz-container { background: var(--card); width: 100%; max-width: 500px; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin: auto; }
+        .option-btn { width: 100%; background: #1c2128; border: 1px solid #333; color: white; padding: 15px; margin-top: 10px; border-radius: 12px; text-align: left; cursor: pointer; transition: 0.3s; font-size: 14px; }
+        .option-btn:hover { border-color: var(--primary); }
+        .option-btn.selected { background: var(--primary); color: white; border-color: var(--primary); }
+        #next-btn { background: var(--primary); color: white; border: none; padding: 12px 30px; border-radius: 10px; margin-top: 20px; font-weight: bold; cursor: pointer; display: none; width: 100%; }
         .hidden { display: none; }
+        .finish-btn { background: #ff4444; color: white; border: none; padding: 8px; border-radius: 8px; font-size: 10px; cursor: pointer; margin-top: 15px; width: 100%; opacity: 0.7; }
     </style>
 </head>
 <body>
@@ -34,42 +36,71 @@
     <div class="main">
         <div id="quiz-container">
             <div id="question-area">
-                <h3 id="q-text">Loading Questions...</h3>
-                <div id="options-list"></div>
+                <h3 id="q-text">Select a Chapter to Start</h3>
+                <div id="options-list">
+                    <button class="option-btn" onclick="startTest('Life Processes')">🧬 Life Processes</button>
+                    <button class="option-btn" onclick="startTest('Genetics')">🧪 Genetics</button>
+                </div>
                 <button id="next-btn" onclick="nextQuestion()">Next Question →</button>
+                <button id="submit-early" class="finish-btn hidden" onclick="showResult()">Finish Test Early</button>
             </div>
+
             <div id="result-area" class="hidden">
-                <h2 style="color:#3db2ff">Test Completed! 🎉</h2>
-                <p id="score-text" style="font-size: 24px;"></p>
-                <button onclick="location.reload()" style="background:#1c2128; color:white; border:1px solid #333; padding:10px 20px; border-radius:10px;">Retake Test</button>
+                <h2 style="color:var(--primary)">Test Completed! 🎉</h2>
+                <p id="score-text" style="font-size: 24px; font-weight: bold;"></p>
+                <div id="solutions-container"></div>
+                <button onclick="location.reload()" style="background:var(--primary); color:white; border:none; padding:12px 20px; border-radius:10px; width:100%; margin-top:15px; cursor:pointer;">Back to Chapters</button>
             </div>
         </div>
     </div>
 
     <script>
-    // Firebase Config same rahega
-    firebase.initializeApp(firebaseConfig);
+    // 1. Firebase Configuration (Apne Dashboard se copy karein)
+    const firebaseConfig = {
+        apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDAwIHRYCfT8",
+        authDomain: "phnoenix-coaching.firebaseapp.com",
+        projectId: "phnoenix-coaching",
+        storageBucket: "phnoenix-coaching.appspot.com",
+        messagingSenderId: "56032052098",
+        appId: "1:56032052098:web:43d562162215be0eb3459b"
+    };
+
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.firestore();
 
     let questions = [];
     let currentIdx = 0;
     let score = 0;
-    let userAnswers = []; // Solution ke liye answers save karne ke liye
+    let userAnswers = [];
+    let currentChapter = "";
 
-    // URL se chapter name nikalna (e.g. tests.html?chapter=Life Processes)
-    const urlParams = new URLSearchParams(window.location.search);
-    const selectedChapter = urlParams.get('chapter') || "General";
+    // 2. Check URL for Chapter
+    window.onload = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const chapterFromUrl = urlParams.get('chapter');
+        if (chapterFromUrl) {
+            startTest(chapterFromUrl);
+        }
+    };
 
-    // 1. Fetch Chapter Specific Questions
-    db.collection("polls").where("chapter", "==", selectedChapter).get().then((snapshot) => {
-        questions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (questions.length > 0) showQuestion();
-        else document.getElementById('q-text').innerText = "Is chapter ke liye koi test nahi hai.";
-    });
+    function startTest(chapter) {
+        currentChapter = chapter;
+        document.getElementById('q-text').innerText = "Loading " + chapter + " Questions...";
+        document.getElementById('options-list').innerHTML = "";
+        
+        db.collection("polls").where("chapter", "==", chapter).get().then((snapshot) => {
+            questions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (questions.length > 0) {
+                document.getElementById('submit-early').classList.remove('hidden');
+                showQuestion();
+            } else {
+                document.getElementById('q-text').innerText = "Koi sawal nahi mile!";
+            }
+        });
+    }
 
     function showQuestion() {
         let q = questions[currentIdx];
-        // Question Numbering jodh di hai
         document.getElementById('q-text').innerText = `Q${currentIdx + 1}. ${q.question}`;
         const optList = document.getElementById('options-list');
         optList.innerHTML = "";
@@ -82,13 +113,6 @@
             btn.onclick = () => selectOption(btn, opt, q.answer);
             optList.appendChild(btn);
         });
-
-        // BEECH MEIN SUBMIT KA OPTION (Aapke maange anusar)
-        const submitNowBtn = document.createElement('button');
-        submitNowBtn.innerText = "Finish Test Now";
-        submitNowBtn.style = "background:red; margin-top:10px; font-size:10px; border-radius:8px;";
-        submitNowBtn.onclick = showResult;
-        optList.appendChild(submitNowBtn);
     }
 
     function selectOption(btn, opt, correct) {
@@ -99,51 +123,56 @@
     }
 
     function nextQuestion() {
-        if (userAnswers[currentIdx]?.picked === userAnswers[currentIdx]?.correct) score++;
         currentIdx++;
-        if (currentIdx < questions.length) showQuestion();
-        else showResult();
+        if (currentIdx < questions.length) {
+            showQuestion();
+        } else {
+            showResult();
+        }
     }
 
     async function showResult() {
-        // "Score loading" fix karne ke liye pehle result container dikhayenge
         document.getElementById('question-area').classList.add('hidden');
         document.getElementById('result-area').classList.remove('hidden');
-        document.getElementById('score-text').innerText = `Calculating Score...`;
-
-        const userEmail = localStorage.getItem("userEmail") || "Anonymous";
         
-        // Final Score calculation
         let finalScore = 0;
         userAnswers.forEach(ans => { if(ans.picked === ans.correct) finalScore++; });
 
-        // Database mein save
+        document.getElementById('score-text').innerText = `Score: ${finalScore} / ${questions.length}`;
+
+        // Save to Firebase
+        const userEmail = localStorage.getItem("userEmail") || "Anonymous";
         await db.collection("test_results").add({
             student: userEmail,
             score: finalScore,
             total: questions.length,
-            subject: selectedChapter,
+            subject: currentChapter,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        document.getElementById('score-text').innerHTML = `
-            Your Score: ${finalScore} / ${questions.length} <br><br>
-            <button class="option-btn" onclick="viewSolutions()" style="background:var(--primary)">📝 View Solutions</button>
-        `;
+        // Add Solution View Button
+        const solBtn = document.createElement('button');
+        solBtn.className = "option-btn";
+        solBtn.style.background = "#ffbc00";
+        solBtn.style.color = "#000";
+        solBtn.innerText = "📝 View Detailed Solutions";
+        solBtn.onclick = viewSolutions;
+        document.getElementById('solutions-container').appendChild(solBtn);
     }
 
     function viewSolutions() {
-        let solHtml = "<h3>Detailed Solutions:</h3>";
+        let solHtml = "<div style='margin-top:20px; border-top:1px solid #333; padding-top:10px;'>";
         userAnswers.forEach((ans, i) => {
-            const color = ans.picked === ans.correct ? "green" : "red";
+            const isCorrect = ans.picked === ans.correct;
             solHtml += `
-                <div style="text-align:left; padding:10px; border-bottom:1px solid #333;">
-                    <p><b>Q${i+1}.</b> ${ans.qText}</p>
-                    <p style="color:${color}">Your Answer: ${ans.picked || 'Not attempted'}</p>
-                    <p style="color:green">Correct: ${ans.correct}</p>
+                <div style="text-align:left; margin-bottom:15px; background:#000; padding:10px; border-radius:10px; border-left:4px solid ${isCorrect ? 'green' : 'red'};">
+                    <p style="margin:0; font-size:13px;"><b>Q${i+1}.</b> ${ans.qText}</p>
+                    <p style="margin:5px 0 0; color:${isCorrect ? 'green' : 'red'}; font-size:12px;">Your: ${ans.picked || 'Skipped'}</p>
+                    <p style="margin:2px 0 0; color:green; font-size:12px;">Correct: ${ans.correct}</p>
                 </div>`;
         });
-        document.getElementById('result-area').innerHTML = solHtml + `<button class="option-btn" onclick="location.reload()">Back</button>`;
+        document.getElementById('solutions-container').innerHTML = solHtml + "</div>";
     }
     </script>
-    
+</body>
+</html>
