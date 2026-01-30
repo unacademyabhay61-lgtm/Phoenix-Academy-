@@ -55,7 +55,7 @@
     </div>
 
     <script>
-    // 1. Firebase Configuration (Apne Dashboard se copy karein)
+    // 1. Firebase Configuration
     const firebaseConfig = {
         apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDAwIHRYCfT8",
         authDomain: "phnoenix-coaching.firebaseapp.com",
@@ -74,18 +74,41 @@
     let userAnswers = [];
     let currentChapter = "";
 
-    // 2. Check URL for Chapter
+    // 2. URL Check & Auto-Loader
     window.onload = () => {
         const urlParams = new URLSearchParams(window.location.search);
         const chapterFromUrl = urlParams.get('chapter');
         if (chapterFromUrl) {
             startTest(chapterFromUrl);
+        } else {
+            showChapterSelection();
         }
     };
 
+    async function showChapterSelection() {
+        document.getElementById('q-text').innerText = "📚 Select a Chapter";
+        const optList = document.getElementById('options-list');
+        optList.innerHTML = "⏳ Loading available tests...";
+
+        // Database se unique chapters fetch karna
+        const snapshot = await db.collection("polls").get();
+        const chapters = [...new Set(snapshot.docs.map(doc => doc.data().chapter))];
+
+        optList.innerHTML = "";
+        chapters.forEach(chap => {
+            if (chap) {
+                const btn = document.createElement('button');
+                btn.className = "option-btn";
+                btn.innerText = "📝 " + chap;
+                btn.onclick = () => { window.location.href = `tests.html?chapter=${chap}`; };
+                optList.appendChild(btn);
+            }
+        });
+    }
+
     function startTest(chapter) {
         currentChapter = chapter;
-        document.getElementById('q-text').innerText = "Loading " + chapter + " Questions...";
+        document.getElementById('q-text').innerText = "Loading " + chapter + "...";
         document.getElementById('options-list').innerHTML = "";
         
         db.collection("polls").where("chapter", "==", chapter).get().then((snapshot) => {
@@ -94,7 +117,8 @@
                 document.getElementById('submit-early').classList.remove('hidden');
                 showQuestion();
             } else {
-                document.getElementById('q-text').innerText = "Koi sawal nahi mile!";
+                document.getElementById('q-text').innerText = "Oops! Is chapter mein sawal nahi mile.";
+                showChapterSelection();
             }
         });
     }
@@ -124,24 +148,19 @@
 
     function nextQuestion() {
         currentIdx++;
-        if (currentIdx < questions.length) {
-            showQuestion();
-        } else {
-            showResult();
-        }
+        if (currentIdx < questions.length) showQuestion();
+        else showResult();
     }
 
     async function showResult() {
         document.getElementById('question-area').classList.add('hidden');
         document.getElementById('result-area').classList.remove('hidden');
-        
         let finalScore = 0;
         userAnswers.forEach(ans => { if(ans.picked === ans.correct) finalScore++; });
 
         document.getElementById('score-text').innerText = `Score: ${finalScore} / ${questions.length}`;
 
-        // Save to Firebase
-        const userEmail = localStorage.getItem("userEmail") || "Anonymous";
+        const userEmail = localStorage.getItem("userEmail") || "Guest";
         await db.collection("test_results").add({
             student: userEmail,
             score: finalScore,
@@ -149,7 +168,31 @@
             subject: currentChapter,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
+        
+        // Solutions dikhane ka button
+        const solBtn = document.createElement('button');
+        solBtn.className = "option-btn";
+        solBtn.style.background = "#ffbc00";
+        solBtn.style.color = "black";
+        solBtn.innerText = "📝 View Solutions";
+        solBtn.onclick = viewSolutions;
+        document.getElementById('result-area').appendChild(solBtn);
+    }
 
+    function viewSolutions() {
+        let solHtml = "<h3>Answers & Solutions:</h3>";
+        userAnswers.forEach((ans, i) => {
+            const color = ans.picked === ans.correct ? "#4CAF50" : "#F44336";
+            solHtml += `<div style="text-align:left; padding:10px; border-bottom:1px solid #333; color:${color}">
+                <b>Q${i+1}.</b> ${ans.qText}<br>
+                <span>Aapka Jawab: ${ans.picked || 'N/A'}</span><br>
+                <span style="color:#4CAF50">Sahi Jawab: ${ans.correct}</span>
+            </div>`;
+        });
+        document.getElementById('result-area').innerHTML = solHtml + `<button class="option-btn" onclick="location.reload()">Back</button>`;
+    }
+    </script>
+    
         // Add Solution View Button
         const solBtn = document.createElement('button');
         solBtn.className = "option-btn";
