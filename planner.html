@@ -49,7 +49,46 @@
                       <a href="${data.link}" target="_blank" class="btn-open">OPEN NOTES →</a>
                   </div>`;
           });
-      });
+      });<script>
+  // 1. Firebase Connection
+  const firebaseConfig = {
+    apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDaWIHRYCfT8",
+    authDomain: "phnoenix-coaching.firebaseapp.com",
+    projectId: "phnoenix-coaching",
+    appId: "1:56032052098:web:43d562162215be0eb3459b"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // 2. CLASSES DIKHANE KA LOGIC (Purana Wala)
+  db.collection("classes").orderBy("classDate").onSnapshot((snapshot) => {
+      const liveList = document.getElementById('live-list'); // Apni classes wali ID check karein
+      if(liveList) {
+          liveList.innerHTML = "";
+          snapshot.forEach((doc) => {
+              let c = doc.data();
+              liveList.innerHTML += `<div class="class-card">...</div>`; // Aapka purana card design
+          });
+      }
+  });
+
+  // 3. NOTES SECTION ME DATA DIKHANE KA LOGIC
+  db.collection("academy_content").where("type", "==", "notes").onSnapshot((snapshot) => {
+      const notesList = document.getElementById('notes-list'); // Notes wale dibbe ki ID
+      if(notesList) {
+          notesList.innerHTML = "";
+          snapshot.forEach((doc) => {
+              let n = doc.data();
+              notesList.innerHTML += `
+                  <div style="background:#222; padding:10px; margin-top:5px; border-radius:5px;">
+                      <span style="color:#ffbc00;">${n.title}</span>
+                      <a href="${n.link}" target="_blank" style="float:right; color:white;">View PDF</a>
+                  </div>`;
+          });
+      }
+  });
+</script>
+    
     </script>
 </body>
 </html>
