@@ -115,6 +115,41 @@
                 });
             });
         }
-    </script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script>
+  // Firebase Config (Admin panel wala hi use karein)
+  const firebaseConfig = {
+    apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDaWIHRYCfT8",
+    authDomain: "phnoenix-coaching.firebaseapp.com",
+    projectId: "phnoenix-coaching",
+    appId: "1:56032052098:web:43d562162215be0eb3459b"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // NOTES (DIAGRAMS) DIKHANE KA LOGIC
+  db.collection("academy_content").where("type", "==", "notes").onSnapshot((snapshot) => {
+      const notesList = document.getElementById('notes-list'); // Check karein aapki ID yahi hai ya nahi
+      notesList.innerHTML = ""; 
+      
+      if(snapshot.empty) {
+          notesList.innerHTML = "<p style='color:#888; text-align:center;'>Abhi koi notes nahi hain.</p>";
+          return;
+      }
+
+      snapshot.forEach((doc) => {
+          let data = doc.data();
+          notesList.innerHTML += `
+              <div class="note-card" style="background:#222; padding:15px; border-radius:10px; margin-bottom:10px; border-left:4px solid #ffbc00;">
+                  <h4 style="color:#ffbc00; margin:0;">${data.title}</h4>
+                  <p style="font-size:11px; color:#aaa;">Date: ${data.date}</p>
+                  <a href="${data.link}" target="_blank" style="color:white; text-decoration:underline; font-size:14px;">Open Study Material</a>
+              </div>`;
+      });
+  });
+</script>
+    
 </body>
 </html>
