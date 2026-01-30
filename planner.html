@@ -3,24 +3,40 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { background: #0b0f19; color: white; font-family: sans-serif; padding: 20px; }
-        .note-card { background: #1c2128; border-radius: 10px; padding: 15px; margin-bottom: 15px; border-left: 5px solid #ffbc00; }
-        .btn-open { display: inline-block; color: #ffbc00; text-decoration: none; font-weight: bold; margin-top: 10px; border: 1px solid #ffbc00; padding: 5px 10px; border-radius: 5px; }
-        h2 { color: #ffbc00; text-align: center; }
+        body { background: #0b0f19; color: white; font-family: sans-serif; padding: 15px; }
+        .tab-btn { background: #1c2128; color: #888; border: none; padding: 10px 20px; border-radius: 20px; margin-right: 5px; cursor: pointer; }
+        .tab-btn.active { background: #ffbc00; color: black; font-weight: bold; }
+        .class-card { background: #161b22; padding: 15px; border-radius: 12px; margin-top: 15px; border-left: 5px solid #ffbc00; }
+        .note-item { background: #1c2128; padding: 10px; margin-top: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; }
+        .btn-view { color: #ffbc00; text-decoration: none; font-size: 14px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <h2>Academic Planner & Notes</h2>
-    <div id="planner-display">
-        <p style="text-align:center; color:gray;">Loading notes...</p>
+    <h2 style="color: #ffbc00; text-align: center;">Academic Planner</h2>
+
+    <div style="display: flex; overflow-x: auto; white-space: nowrap; padding-bottom: 10px;">
+        <button class="tab-btn active">All Classes</button>
+        <button class="tab-btn">Class 10th</button>
+        <button class="tab-btn">Class 12th</button>
+    </div>
+
+    <div id="live-list">
+        <p style="text-align:center; color:gray;">Syncing classes...</p>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid #333; margin: 25px 0;">
+
+    <h3 style="color: #3db2ff;">📂 Study Notes & Diagrams</h3>
+    <div id="notes-list">
+        <p style="text-align:center; color:gray;">Checking for notes...</p>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
-      // 1. Firebase Config
+      // Firebase Config
       const firebaseConfig = {
         apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDaWIHRYCfT8",
         authDomain: "phnoenix-coaching.firebaseapp.com",
@@ -30,65 +46,6 @@
       firebase.initializeApp(firebaseConfig);
       const db = firebase.firestore();
 
-      // 2. Sirf "notes" category fetch karne ka logic
-      db.collection("academy_content").where("type", "==", "notes").onSnapshot((snapshot) => {
-          const display = document.getElementById('planner-display');
-          display.innerHTML = ""; 
-
-          if(snapshot.empty) {
-              display.innerHTML = "<p style='text-align:center; color:gray;'>Abhi koi notes ya diagrams nahi hain.</p>";
-              return;
-          }
-
-          snapshot.forEach((doc) => {
-              let data = doc.data();
-              display.innerHTML += `
-                  <div class="note-card">
-                      <h4 style="margin:0;">${data.title}</h4>
-                      <p style="font-size:11px; color:#888;">Added on: ${data.date}</p>
-                      <a href="${data.link}" target="_blank" class="btn-open">OPEN NOTES →</a>
-                  </div>`;
-          });
-      });<script>
-  // 1. Firebase Connection
-  const firebaseConfig = {
-    apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDaWIHRYCfT8",
-    authDomain: "phnoenix-coaching.firebaseapp.com",
-    projectId: "phnoenix-coaching",
-    appId: "1:56032052098:web:43d562162215be0eb3459b"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-
-  // 2. CLASSES DIKHANE KA LOGIC (Purana Wala)
-  db.collection("classes").orderBy("classDate").onSnapshot((snapshot) => {
-      const liveList = document.getElementById('live-list'); // Apni classes wali ID check karein
-      if(liveList) {
-          liveList.innerHTML = "";
-          snapshot.forEach((doc) => {
-              let c = doc.data();
-              liveList.innerHTML += `<div class="class-card">...</div>`; // Aapka purana card design
-          });
-      }
-  });
-
-  // 3. NOTES SECTION ME DATA DIKHANE KA LOGIC
-  db.collection("academy_content").where("type", "==", "notes").onSnapshot((snapshot) => {
-      const notesList = document.getElementById('notes-list'); // Notes wale dibbe ki ID
-      if(notesList) {
-          notesList.innerHTML = "";
-          snapshot.forEach((doc) => {
-              let n = doc.data();
-              notesList.innerHTML += `
-                  <div style="background:#222; padding:10px; margin-top:5px; border-radius:5px;">
-                      <span style="color:#ffbc00;">${n.title}</span>
-                      <a href="${n.link}" target="_blank" style="float:right; color:white;">View PDF</a>
-                  </div>`;
-          });
-      }
-  });
-</script>
-    
-    </script>
-</body>
-</html>
+      // FETCH CLASSES (Purana data wapas lane ke liye)
+      db.collection("classes").orderBy
+        
