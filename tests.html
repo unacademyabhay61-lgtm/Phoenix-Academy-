@@ -14,7 +14,6 @@
         .nav-link.active { color: var(--primary); }
         .icon-box { width: 42px; height: 42px; background: #161b22; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
         .active .icon-box { background: rgba(61, 178, 255, 0.1); border: 1px solid var(--primary); color: var(--primary); }
-
         .main { flex: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; overflow-y: auto; }
         #quiz-container { background: var(--card); width: 100%; max-width: 500px; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin: auto; }
         .option-btn { width: 100%; background: #1c2128; border: 1px solid #333; color: white; padding: 15px; margin-top: 10px; border-radius: 12px; text-align: left; cursor: pointer; transition: 0.3s; font-size: 14px; }
@@ -22,7 +21,7 @@
         .option-btn.selected { background: var(--primary); color: white; border-color: var(--primary); }
         #next-btn { background: var(--primary); color: white; border: none; padding: 12px 30px; border-radius: 10px; margin-top: 20px; font-weight: bold; cursor: pointer; display: none; width: 100%; }
         .hidden { display: none; }
-        .finish-btn { background: #ff4444; color: white; border: none; padding: 8px; border-radius: 8px; font-size: 10px; cursor: pointer; margin-top: 15px; width: 100%; opacity: 0.7; }
+        .sol-card { text-align: left; margin-top: 15px; background: #000; padding: 12px; border-radius: 12px; border-left: 4px solid #333; }
     </style>
 </head>
 <body>
@@ -36,186 +35,131 @@
     <div class="main">
         <div id="quiz-container">
             <div id="question-area">
-                <h3 id="q-text">Select a Chapter to Start</h3>
-                <div id="options-list">
-                    <button class="option-btn" onclick="startTest('Life Processes')">🧬 Life Processes</button>
-                    <button class="option-btn" onclick="startTest('Genetics')">🧪 Genetics</button>
-                </div>
+                <h3 id="q-text">📚 Select a Chapter</h3>
+                <div id="options-list"></div>
                 <button id="next-btn" onclick="nextQuestion()">Next Question →</button>
-                <button id="submit-early" class="finish-btn hidden" onclick="showResult()">Finish Test Early</button>
             </div>
 
             <div id="result-area" class="hidden">
                 <h2 style="color:var(--primary)">Test Completed! 🎉</h2>
                 <p id="score-text" style="font-size: 24px; font-weight: bold;"></p>
                 <div id="solutions-container"></div>
-                <button onclick="location.reload()" style="background:var(--primary); color:white; border:none; padding:12px 20px; border-radius:10px; width:100%; margin-top:15px; cursor:pointer;">Back to Chapters</button>
+                <button onclick="location.reload()" style="background:var(--primary); color:white; border:none; padding:12px 20px; border-radius:10px; width:100%; margin-top:15px; cursor:pointer;">Restart / Chapters</button>
             </div>
         </div>
     </div>
 
     <script>
-    // 1. Firebase Configuration
-    const firebaseConfig = {
-        apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDAwIHRYCfT8",
-        authDomain: "phnoenix-coaching.firebaseapp.com",
-        projectId: "phnoenix-coaching",
-        storageBucket: "phnoenix-coaching.appspot.com",
-        messagingSenderId: "56032052098",
-        appId: "1:56032052098:web:43d562162215be0eb3459b"
-    };
+        const firebaseConfig = {
+            apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDAwIHRYCfT8",
+            authDomain: "phnoenix-coaching.firebaseapp.com",
+            projectId: "phnoenix-coaching",
+            appId: "1:56032052098:web:43d562162215be0eb3459b"
+        };
+        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+        const db = firebase.firestore();
 
-    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
-    const db = firebase.firestore();
+        let questions = [];
+        let currentIdx = 0;
+        let score = 0;
+        let userAnswers = [];
+        let currentChapter = "";
 
-    let questions = [];
-    let currentIdx = 0;
-    let score = 0;
-    let userAnswers = [];
-    let currentChapter = "";
-
-    // 2. URL Check & Auto-Loader
-    window.onload = () => {
         const urlParams = new URLSearchParams(window.location.search);
-        const chapterFromUrl = urlParams.get('chapter');
-        if (chapterFromUrl) {
-            startTest(chapterFromUrl);
-        } else {
-            showChapterSelection();
+        const selectedChapter = urlParams.get('chapter');
+
+        window.onload = () => {
+            if (selectedChapter) { startTest(selectedChapter); } 
+            else { showChapterSelection(); }
+        };
+
+        async function showChapterSelection() {
+            const list = document.getElementById('options-list');
+            list.innerHTML = "⏳ Loading Chapters...";
+            const snapshot = await db.collection("polls").get();
+            const chapters = [...new Set(snapshot.docs.map(doc => doc.data().chapter))];
+            list.innerHTML = "";
+            chapters.forEach(chap => {
+                if(chap) {
+                    const btn = document.createElement('button');
+                    btn.className = "option-btn";
+                    btn.innerText = "📁 " + chap;
+                    btn.onclick = () => { window.location.href = `tests.html?chapter=${chap}`; };
+                    list.appendChild(btn);
+                }
+            });
         }
-    };
 
-    async function showChapterSelection() {
-        document.getElementById('q-text').innerText = "📚 Select a Chapter";
-        const optList = document.getElementById('options-list');
-        optList.innerHTML = "⏳ Loading available tests...";
+        function startTest(chapter) {
+            currentChapter = chapter;
+            document.getElementById('q-text').innerText = "Loading " + chapter + "...";
+            db.collection("polls").where("chapter", "==", chapter).get().then((snapshot) => {
+                questions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (questions.length > 0) { showQuestion(); } 
+                else { document.getElementById('q-text').innerText = "No questions found!"; }
+            });
+        }
 
-        // Database se unique chapters fetch karna
-        const snapshot = await db.collection("polls").get();
-        const chapters = [...new Set(snapshot.docs.map(doc => doc.data().chapter))];
-
-        optList.innerHTML = "";
-        chapters.forEach(chap => {
-            if (chap) {
+        function showQuestion() {
+            let q = questions[currentIdx];
+            document.getElementById('q-text').innerText = `Q${currentIdx + 1}. ${q.question}`;
+            const list = document.getElementById('options-list');
+            list.innerHTML = "";
+            document.getElementById('next-btn').style.display = "none";
+            q.options.forEach(opt => {
                 const btn = document.createElement('button');
                 btn.className = "option-btn";
-                btn.innerText = "📝 " + chap;
-                btn.onclick = () => { window.location.href = `tests.html?chapter=${chap}`; };
-                optList.appendChild(btn);
-            }
-        });
-    }
+                btn.innerText = opt;
+                btn.onclick = () => {
+                    document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    userAnswers[currentIdx] = { picked: opt, correct: q.answer, qText: q.question };
+                    document.getElementById('next-btn').style.display = "block";
+                };
+                list.appendChild(btn);
+            });
+        }
 
-    function startTest(chapter) {
-        currentChapter = chapter;
-        document.getElementById('q-text').innerText = "Loading " + chapter + "...";
-        document.getElementById('options-list').innerHTML = "";
-        
-        db.collection("polls").where("chapter", "==", chapter).get().then((snapshot) => {
-            questions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            if (questions.length > 0) {
-                document.getElementById('submit-early').classList.remove('hidden');
-                showQuestion();
-            } else {
-                document.getElementById('q-text').innerText = "Oops! Is chapter mein sawal nahi mile.";
-                showChapterSelection();
-            }
-        });
-    }
+        function nextQuestion() {
+            if (userAnswers[currentIdx].picked === userAnswers[currentIdx].correct) score++;
+            currentIdx++;
+            if (currentIdx < questions.length) { showQuestion(); } 
+            else { showResult(); }
+        }
 
-    function showQuestion() {
-        let q = questions[currentIdx];
-        document.getElementById('q-text').innerText = `Q${currentIdx + 1}. ${q.question}`;
-        const optList = document.getElementById('options-list');
-        optList.innerHTML = "";
-        document.getElementById('next-btn').style.display = "none";
+        async function showResult() {
+            document.getElementById('question-area').classList.add('hidden');
+            document.getElementById('result-area').classList.remove('hidden');
+            document.getElementById('score-text').innerText = `Score: ${score} / ${questions.length}`;
+            
+            const userEmail = localStorage.getItem("userEmail") || "Guest";
+            await db.collection("test_results").add({
+                student: userEmail, score, total: questions.length,
+                subject: currentChapter, timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
 
-        q.options.forEach((opt) => {
             const btn = document.createElement('button');
             btn.className = "option-btn";
-            btn.innerText = opt;
-            btn.onclick = () => selectOption(btn, opt, q.answer);
-            optList.appendChild(btn);
-        });
-    }
+            btn.style.background = "#ffbc00";
+            btn.style.color = "#000";
+            btn.innerText = "📝 View Solutions";
+            btn.onclick = viewSolutions;
+            document.getElementById('solutions-container').appendChild(btn);
+        }
 
-    function selectOption(btn, opt, correct) {
-        document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        userAnswers[currentIdx] = { picked: opt, correct: correct, qText: questions[currentIdx].question };
-        document.getElementById('next-btn').style.display = "block";
-    }
-
-    function nextQuestion() {
-        currentIdx++;
-        if (currentIdx < questions.length) showQuestion();
-        else showResult();
-    }
-
-    async function showResult() {
-        document.getElementById('question-area').classList.add('hidden');
-        document.getElementById('result-area').classList.remove('hidden');
-        let finalScore = 0;
-        userAnswers.forEach(ans => { if(ans.picked === ans.correct) finalScore++; });
-
-        document.getElementById('score-text').innerText = `Score: ${finalScore} / ${questions.length}`;
-
-        const userEmail = localStorage.getItem("userEmail") || "Guest";
-        await db.collection("test_results").add({
-            student: userEmail,
-            score: finalScore,
-            total: questions.length,
-            subject: currentChapter,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        // Solutions dikhane ka button
-        const solBtn = document.createElement('button');
-        solBtn.className = "option-btn";
-        solBtn.style.background = "#ffbc00";
-        solBtn.style.color = "black";
-        solBtn.innerText = "📝 View Solutions";
-        solBtn.onclick = viewSolutions;
-        document.getElementById('result-area').appendChild(solBtn);
-    }
-
-    function viewSolutions() {
-        let solHtml = "<h3>Answers & Solutions:</h3>";
-        userAnswers.forEach((ans, i) => {
-            const color = ans.picked === ans.correct ? "#4CAF50" : "#F44336";
-            solHtml += `<div style="text-align:left; padding:10px; border-bottom:1px solid #333; color:${color}">
-                <b>Q${i+1}.</b> ${ans.qText}<br>
-                <span>Aapka Jawab: ${ans.picked || 'N/A'}</span><br>
-                <span style="color:#4CAF50">Sahi Jawab: ${ans.correct}</span>
-            </div>`;
-        });
-        document.getElementById('result-area').innerHTML = solHtml + `<button class="option-btn" onclick="location.reload()">Back</button>`;
-    }
-    </script>
-    
-        // Add Solution View Button
-        const solBtn = document.createElement('button');
-        solBtn.className = "option-btn";
-        solBtn.style.background = "#ffbc00";
-        solBtn.style.color = "#000";
-        solBtn.innerText = "📝 View Detailed Solutions";
-        solBtn.onclick = viewSolutions;
-        document.getElementById('solutions-container').appendChild(solBtn);
-    }
-
-    function viewSolutions() {
-        let solHtml = "<div style='margin-top:20px; border-top:1px solid #333; padding-top:10px;'>";
-        userAnswers.forEach((ans, i) => {
-            const isCorrect = ans.picked === ans.correct;
-            solHtml += `
-                <div style="text-align:left; margin-bottom:15px; background:#000; padding:10px; border-radius:10px; border-left:4px solid ${isCorrect ? 'green' : 'red'};">
-                    <p style="margin:0; font-size:13px;"><b>Q${i+1}.</b> ${ans.qText}</p>
-                    <p style="margin:5px 0 0; color:${isCorrect ? 'green' : 'red'}; font-size:12px;">Your: ${ans.picked || 'Skipped'}</p>
-                    <p style="margin:2px 0 0; color:green; font-size:12px;">Correct: ${ans.correct}</p>
+        function viewSolutions() {
+            let html = "";
+            userAnswers.forEach((ans, i) => {
+                const isCorrect = ans.picked === ans.correct;
+                html += `<div class="sol-card" style="border-left-color:${isCorrect ? 'green' : 'red'}">
+                    <b>Q${i+1}.</b> ${ans.qText}<br>
+                    <small style="color:${isCorrect ? 'green' : 'red'}">Your: ${ans.picked}</small><br>
+                    <small style="color:green">Correct: ${ans.correct}</small>
                 </div>`;
-        });
-        document.getElementById('solutions-container').innerHTML = solHtml + "</div>";
-    }
+            });
+            document.getElementById('solutions-container').innerHTML = html;
+        }
     </script>
 </body>
 </html>
+
