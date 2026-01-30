@@ -159,6 +159,30 @@
             });
             document.getElementById('solutions-container').innerHTML = html;
         }
+        function startTest(chapter) {
+    currentChapter = chapter;
+    document.getElementById('q-text').innerText = "Loading " + chapter + "...";
+    
+    // Agar chapter "All" hai toh saare dikhao, nahi toh filter karo
+    let query = db.collection("polls");
+    if (chapter !== "All Questions") {
+        query = query.where("chapter", "==", chapter);
+    }
+
+    query.get().then((snapshot) => {
+        questions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (questions.length > 0) { 
+            showQuestion(); 
+        } else { 
+            // Backup: Agar chapter match na ho toh saare sawal load kar lo
+            db.collection("polls").limit(10).get().then(snap => {
+                questions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                showQuestion();
+            });
+        }
+    });
+        }
+        
     </script>
 </body>
 </html>
