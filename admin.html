@@ -228,6 +228,73 @@ async function uploadContent() {
         alert("Galti hui: " + error.message);
     }
 }
+    // Bulk Upload Function with Error Catching
+async function uploadBulkQuiz() {
+    const rawData = document.getElementById('bulkJsonInput').value;
+    const btn = document.getElementById('bulkUploadBtn');
+    
+    if(!rawData.trim()) return alert("Bhai, box khali hai! JSON paste toh karo.");
+    
+    btn.innerText = "⏳ PROCESSING...";
+    btn.disabled = true;
+
+    try {
+        const questions = JSON.parse(rawData);
+        const batch = db.batch();
+
+        questions.forEach((q) => {
+            const docRef = db.collection("polls").doc(); 
+            batch.set(docRef, {
+                question: q.question,
+                options: q.options,
+                answer: q.answer,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        });
+
+        await batch.commit();
+        alert("🎉 Mubarak ho! Saare questions upload ho gaye.");
+        document.getElementById('bulkJsonInput').value = "";
+    } catch (e) {
+        console.error(e);
+        alert("❌ Error: JSON format mein galti hai. Check karo ki saare [ ] aur { } sahi se band hain.");
+    } finally {
+        btn.innerText = "🚀 UPLOAD 50 QUESTIONS NOW";
+        btn.disabled = false;
+    }
+}
+
+// Live Test Manager (Delete Functionality)
+function loadTestManager() {
+    db.collection("polls").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+        const list = document.getElementById('test-list-admin');
+        if (!list) return;
+        list.innerHTML = "";
+        
+        if (snapshot.empty) {
+            list.innerHTML = "<p style='color:#666; font-size:12px;'>Koi test live nahi hai.</p>";
+            return;
+        }
+
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            list.innerHTML += `
+                <div style="background:#000; padding:12px; margin-bottom:10px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; border-left:4px solid #ff4444;">
+                    <div style="font-size:11px; color:#eee;">${data.question.substring(0, 40)}...</div>
+                    <button onclick="deletePoll('${doc.id}')" style="background:#ff4444; color:white; border:none; padding:6px 12px; border-radius:6px; font-size:10px; font-weight:bold; cursor:pointer;">DELETE</button>
+                </div>`;
+        });
+    });
+}
+
+function deletePoll(id) {
+    if(confirm("Pakka delete kar doon?")) {
+        db.collection("polls").doc(id).delete();
+    }
+}
+
+// Initialize on load
+window.onload = loadTestManager;
     
     
 </script>
