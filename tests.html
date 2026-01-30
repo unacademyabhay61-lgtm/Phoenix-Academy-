@@ -1,6 +1,6 @@
 <script>
   // 1. Database se Tests dikhane ka logic
-  db.collection("academy_content").where("type", "==", "test").onSnapshot((snapshot) => {
+  db.collection("academy_content").onSnapshot((snapshot) => {
       const testList = document.getElementById('test-list');
       testList.innerHTML = ""; // Purana data saaf karne ke liye
       
