@@ -11,18 +11,13 @@
         .container { max-width: 450px; margin: auto; }
         .admin-card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #2a2d32; margin-bottom: 20px; }
         h3 { margin-top: 0; color: var(--primary); font-size: 18px; }
-        
         label { display: block; font-size: 11px; color: #888; margin: 10px 0 4px 4px; font-weight: 600; text-transform: uppercase; }
         input, select, textarea { width: 100%; padding: 12px; background: #000; border: 1px solid #333; color: white; border-radius: 12px; box-sizing: border-box; outline: none; font-size: 14px; margin-bottom: 10px; }
-        
         .btn { width: 100%; padding: 14px; border: none; color: white; font-weight: 700; border-radius: 12px; cursor: pointer; margin-top: 10px; transition: 0.2s; text-transform: uppercase; }
         .btn-blue { background: var(--primary); }
         .btn-yellow { background: var(--notice); color: #000; }
         .btn-red { background: var(--danger); font-size: 12px; padding: 8px; width: auto; margin-top: 5px; }
-        
-        /* Manager List Style */
         .list-item { background: #000; padding: 12px; border-radius: 12px; border-left: 4px solid var(--primary); margin-bottom: 10px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
-        .section-tag { background: #222; padding: 5px 10px; border-radius: 8px; font-size: 10px; color: var(--primary); font-weight: bold; margin-bottom: 15px; display: inline-block; }
     </style>
 </head>
 <body>
@@ -37,16 +32,10 @@
             <option value="Abhay Raghuvanshi">Abhay Raghuvanshi Sir</option>
             <option value="Shivani Singh">Shivani Singh Mam</option>
         </select>
-        <label>Mode</label>
-        <select id="classMode">
-            <option value="Online">Online Class</option>
-            <option value="Offline">Offline Class</option>
-        </select>
         <input type="text" id="className" placeholder="Class Title">
         <select id="targetClass">
             <option value="10th">Class 10th</option>
             <option value="12th">Class 12th</option>
-            <option value="NEET">NEET UG</option>
         </select>
         <div style="display:flex; gap:10px;">
             <input type="date" id="classDate">
@@ -56,196 +45,148 @@
         <button class="btn btn-blue" onclick="addClass()">Publish Now</button>
     </div>
 
-    <div class="admin-card" style="border-color: var(--notice);">
-        <h3 style="color: var(--notice);">📢 Notice Board</h3>
-        <textarea id="noticeText" placeholder="Write notice..."></textarea>
-        <button class="btn btn-yellow" onclick="updateNotice()">Update Notice</button>
+    <div class="admin-card" style="border-color: #3db2ff;">
+        <h3>📝 Create Bulk Test (Polls)</h3>
+        <textarea id="bulkJsonInput" placeholder='JSON yahan paste karein...' style="height: 120px;"></textarea>
+        <button class="btn btn-blue" id="bulkUploadBtn" onclick="uploadBulkQuiz()">🚀 UPLOAD 50 QUESTIONS NOW</button>
     </div>
-<div class="admin-card" style="border-color: var(--primary);">
-    <h3 style="color: var(--primary);">📝 Upload Test / Study Notes</h3>
-    <input type="text" id="contentTitle" placeholder="Topic Name (e.g. Physics Ch-1)">
-    <input type="text" id="contentLink" placeholder="Google Drive/PDF Link">
-    <select id="contentType">
-        <option value="test">Exam Test Paper</option>
-        <option value="notes">Chapter Notes</option>
-    </select>
-    <button class="btn btn-blue" onclick="uploadContent()">Publish Now</button>
-<div class="admin-card" style="border-color: #3db2ff;">
-    <h3 style="color: #3db2ff;">📝 Create Bulk Test (Polls)</h3>
-    <textarea id="bulkJsonInput" placeholder='JSON yahan paste karein...' style="height: 120px;"></textarea>
-    <button class="btn btn-blue" id="bulkUploadBtn" onclick="uploadBulkQuiz()">🚀 UPLOAD 50 QUESTIONS NOW</button>
-</div>
 
-<div class="admin-card" style="border-color: #ff4444; margin-top: 20px;">
-    <h3 style="color: #ff4444;">🛠️ Live Test Manager</h3>
-    <p style="font-size: 11px; color: #888;">Yahan se aap questions delete kar sakte hain.</p>
-    <div id="test-list-admin">Loading tests...</div>
-</div>
-    
-    
-</div>
-    
-    <div class="admin-card">
-        <h3 style="color: #fff;">🛠️ Live Class Manager</h3>
-        <p style="font-size: 11px; color: #555;">Yahan se purani classes delete karein</p>
-        <div id="live-list">Loading classes...</div>
-    </div><div class="admin-card" style="margin-top: 15px;">
-    <h3 style="color: #fff;">📁 Manage Uploads</h3>
-    <div id="content-list">Loading items...</div>
+    <div class="admin-card" style="border-color: #ff4444;">
+        <h3 style="color: #ff4444;">🛠️ Live Test Manager</h3>
+        <div id="test-list-admin">Loading tests...</div>
     </div>
-    
+
+    <div class="admin-card">
+        <h3>🛠️ Live Class Manager</h3>
+        <div id="live-list">Loading classes...</div>
+    </div>
+
+    <div class="admin-card">
+        <h3 style="color: #ffbc00;">📊 Student Analytics</h3>
+        <div id="analytics-list">Loading records...</div>
+    </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
 <script>
+    // 1. Firebase Configuration
     const firebaseConfig = {
         apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDAwIHRYCfT8",
         authDomain: "phnoenix-coaching.firebaseapp.com",
         projectId: "phnoenix-coaching",
         appId: "1:56032052098:web:43d562162215be0eb3459b"
     };
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.firestore();
 
-    // 1. ADD CLASS
+    // 2. Class Logic
     function addClass() {
         const data = {
             teacher: document.getElementById('teacherName').value,
-            mode: document.getElementById('classMode').value,
             title: document.getElementById('className').value,
             targetClass: document.getElementById('targetClass').value,
             date: document.getElementById('classDate').value,
             time: document.getElementById('classTime').value,
             link: document.getElementById('videoLink').value,
-            createdAt: new Date()
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         if(!data.title || !data.date) return alert("Fill details!");
-        
         db.collection("classes").add(data).then(() => alert("Class Added!"));
     }
 
-    // 2. UPDATE NOTICE
-    function updateNotice() {
-        const text = document.getElementById('noticeText').value;
-        db.collection("notices").doc("current").set({ message: text, timestamp: new Date() })
-        .then(() => alert("Notice Updated!"));
-    }
-
-    // 3. REAL-TIME LIST & DELETE LOGIC
-    db.collection("classes").orderBy("createdAt", "desc").onSnapshot((snapshot) => {
-        const listDiv = document.getElementById('live-list');
-        listDiv.innerHTML = "";
-        snapshot.forEach((doc) => {
-            const cls = doc.data();
-            listDiv.innerHTML += `
-                <div class="list-item">
-                    <div>
-                        <b>${cls.title}</b><br>
-                        <span style="color:#666; font-size:10px;">${cls.targetClass} | ${cls.date}</span>
-                    </div>
-                    <button class="btn-red" onclick="deleteClass('${doc.id}')">DELETE</button>
-                </div>
-
-
-// 🚀 1. BULK UPLOAD FUNCTION (Fixed)
-async function uploadBulkQuiz() {
-    const rawData = document.getElementById('bulkJson').value; 
-    const btn = document.querySelector('.btn-blue[onclick="uploadBulkQuiz()"]');
-    
-    if(!rawData.trim()) return alert("Bhai, pehle JSON toh dalo!");
-    
-    btn.innerText = "⏳ Uploading...";
-    btn.disabled = true;
-
-    try {
-        const questions = JSON.parse(rawData);
-        const batch = db.batch();
-
-        questions.forEach((q) => {
-            const docRef = db.collection("polls").doc(); 
-            batch.set(docRef, {
-                question: q.question,
-                options: q.options,
-                answer: q.answer,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    function loadClasses() {
+        db.collection("classes").orderBy("createdAt", "desc").onSnapshot((snapshot) => {
+            const listDiv = document.getElementById('live-list');
+            listDiv.innerHTML = snapshot.empty ? "No classes." : "";
+            snapshot.forEach((doc) => {
+                const cls = doc.data();
+                listDiv.innerHTML += `
+                    <div class="list-item">
+                        <div><b>${cls.title}</b><br><small>${cls.date}</small></div>
+                        <button class="btn-red" onclick="deleteDoc('classes','${doc.id}')">DELETE</button>
+                    </div>`;
             });
         });
-
-        await batch.commit();
-        alert("🎉 Success! Questions upload ho gaye.");
-        document.getElementById('bulkJson').value = "";
-    } catch (e) {
-        alert("❌ JSON Format Galat hai! Bracket [ ] check karo.");
-    } finally {
-        btn.innerText = "🚀 UPLOAD 50 QUESTIONS NOW";
-        btn.disabled = false;
     }
-}
 
-// 🛠️ 2. TEST MANAGER & DELETE ALL
-function loadTestManager() {
-    const list = document.getElementById('test-list-admin');
-    if(!list) return;
+    // 3. Bulk Upload
+    async function uploadBulkQuiz() {
+        const rawData = document.getElementById('bulkJsonInput').value;
+        const btn = document.getElementById('bulkUploadBtn');
+        if(!rawData.trim()) return alert("JSON paste karo!");
+        
+        btn.innerText = "⏳ Uploading...";
+        btn.disabled = true;
 
-    db.collection("polls").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-        // Delete All button upar dikhega
-        let deleteAllBtn = snapshot.empty ? "" : `<button onclick="deleteAllQuestions()" class="btn-red" style="width:100%; margin-bottom:15px; background:#ff4444; font-weight:bold;">⚠️ DELETE ALL QUESTIONS</button>`;
-        
-        list.innerHTML = deleteAllBtn;
-        
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            list.innerHTML += `
-                <div class="list-item" style="display:flex; justify-content:space-between; align-items:center; background:#000; padding:10px; margin-bottom:8px; border-radius:12px; border-left:4px solid #ff4444;">
-                    <div style="font-size:11px; color:#fff;">${data.question.substring(0, 30)}...</div>
-                    <button onclick="deletePoll('${doc.id}')" class="btn-red" style="width:auto; margin:0; padding:5px 10px; font-size:10px;">DEL</button>
+        try {
+            const questions = JSON.parse(rawData);
+            const batch = db.batch();
+            questions.forEach((q) => {
+                const docRef = db.collection("polls").doc();
+                batch.set(docRef, { ...q, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+            });
+            await batch.commit();
+            alert("🎉 Upload Success!");
+            document.getElementById('bulkJsonInput').value = "";
+        } catch (e) {
+            alert("❌ JSON Error!");
+        } finally {
+            btn.innerText = "🚀 UPLOAD 50 QUESTIONS NOW";
+            btn.disabled = false;
+        }
+    }
+
+    // 4. Test Manager
+    function loadTestManager() {
+        db.collection("polls").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+            const list = document.getElementById('test-list-admin');
+            let html = snapshot.empty ? "No tests." : `<button onclick="deleteAllQuestions()" class="btn-red" style="width:100%; margin-bottom:10px;">⚠️ DELETE ALL</button>`;
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                html += `<div class="list-item">
+                    <span>${data.question.substring(0,25)}...</span>
+                    <button class="btn-red" onclick="deleteDoc('polls','${doc.id}')">DEL</button>
                 </div>`;
+            });
+            list.innerHTML = html;
         });
-    });
-}
+    }
 
-function deletePoll(id) {
-    if(confirm("Mita du?")) db.collection("polls").doc(id).delete();
-// --- 3. DELETE ALL FUNCTION ---
-async function deleteAllQuestions() {
-    if(!confirm("⚠️ BHAI, SARE QUESTIONS DELETE HO JAYENGE! Sure ho?")) return;
-    const snapshot = await db.collection("polls").get();
-    const batch = db.batch();
-    snapshot.forEach(doc => batch.delete(doc.ref));
-    await batch.commit();
-    alert("💥 Saare questions delete ho gaye!");
-}
+    async function deleteAllQuestions() {
+        if(!confirm("Sure? Everything will be deleted!")) return;
+        const snap = await db.collection("polls").get();
+        const batch = db.batch();
+        snap.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        alert("Deleted!");
+    }
 
-// --- 4. STUDENT ANALYTICS LOGIC ---
-function loadAnalytics() {
-    const div = document.getElementById('analytics-list');
-    if(!div) return;
-    db.collection("test_results").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-        div.innerHTML = snapshot.empty ? "No records found." : "";
-        snapshot.forEach(doc => {
-            const res = doc.data();
-            div.innerHTML += `<div style="padding:10px; border-bottom:1px solid #222; font-size:11px;">
-                <b style="color:#3db2ff;">${res.student}</b>: ${res.score}/${res.total} marks <br>
-                <small style="color:#666;">${res.date}</small>
-            </div>`;
+    // 5. Analytics
+    function loadAnalytics() {
+        db.collection("test_results").orderBy("timestamp", "desc").limit(10).onSnapshot((snapshot) => {
+            const div = document.getElementById('analytics-list');
+            div.innerHTML = snapshot.empty ? "No records." : "";
+            snapshot.forEach(doc => {
+                const res = doc.data();
+                div.innerHTML += `<div style="padding:8px; border-bottom:1px solid #222; font-size:11px;">
+                    <b>${res.student}</b>: ${res.score}/${res.total} marks</div>`;
+            });
         });
-    });
-}
+    }
 
-// --- 5. UNIVERSAL DELETE FOR CLASSES ---
-function deleteDoc(collection, id) {
-    if(confirm("Bhai, pakka mita du?")) {
-        db.collection(collection).doc(id).delete();
-    }// Ye code Line 241 par paste karein
-window.onload = function() {
-    loadTestManager(); // Tests load karega
-    loadAnalytics();   // Student record load karega
-    console.log("All systems online!");
-};
-    
-}
+    // 6. Universal Delete
+    function deleteDoc(coll, id) {
+        if(confirm("Mita du?")) db.collection(coll).doc(id).delete();
+    }
+
+    // 🚀 Master Switch - Starts everything on Load
+    window.onload = function() {
+        loadClasses();
+        loadTestManager();
+        loadAnalytics();
+    };
 </script>
 </body>
 </html>
