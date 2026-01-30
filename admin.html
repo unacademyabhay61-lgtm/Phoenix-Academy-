@@ -365,6 +365,26 @@ function deletePoll(id) {
 
 // Start loading when page opens
 window.onload = loadTestManager;
+    <div class="admin-card" style="border-color: #ffbc03; margin-top: 20px;">
+    <h3 style="color: #ffbc03;">📊 Student Test Analytics</h3>
+    <div id="analytics-list" style="font-size: 12px; color: #ccc;">Loading records...</div>
+</div>
+
+<script>
+function loadAnalytics() {
+    db.collection("test_results").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+        const div = document.getElementById('analytics-list');
+        div.innerHTML = "";
+        snapshot.forEach(doc => {
+            const res = doc.data();
+            div.innerHTML += `<div style="padding:8px; border-bottom:1px solid #333;">
+                <b>${res.student}</b>: ${res.score}/${res.total} marks (${res.date})
+            </div>`;
+        });
+    });
+}
+loadAnalytics();
+</script>
     
 </script>
 </body>
