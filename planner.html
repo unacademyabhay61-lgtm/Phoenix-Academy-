@@ -7,19 +7,15 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #0b0f19; color: white; display: flex; height: 100vh; overflow: hidden; }
-        
-        /* Sidebar Dashboard Look */
+        body { margin: 0; font-family: sans-serif; background: #0b0f19; color: white; display: flex; height: 100vh; }
         .sidebar { width: 85px; background: #0d1117; border-right: 1px solid #1f2937; display: flex; flex-direction: column; align-items: center; padding-top: 25px; gap: 25px; }
         .nav-link { text-decoration: none; color: #9ca3af; font-size: 10px; text-align: center; display: flex; flex-direction: column; gap: 6px; }
         .nav-link.active { color: #3db2ff; }
         .icon-box { width: 42px; height: 42px; background: #161b22; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1px solid transparent; }
         .active .icon-box { background: rgba(61, 178, 255, 0.1); border-color: #3db2ff; color: #3db2ff; }
-
-        /* Content Area */
         .main { flex: 1; padding: 20px; overflow-y: auto; }
-        .class-card { background: #161b22; padding: 18px; border-radius: 15px; margin-bottom: 12px; border-left: 4px solid #3db2ff; position: relative; }
-        .class-name { font-size: 17px; font-weight: bold; color: #f3f4f6; margin-bottom: 4px; }
+        .class-card { background: #161b22; padding: 18px; border-radius: 15px; margin-bottom: 12px; border-left: 4px solid #3db2ff; }
+        .class-name { font-size: 17px; font-weight: bold; color: #f3f4f6; margin-bottom: 4px; text-transform: capitalize; }
         .educator-name { font-size: 13px; color: #3db2ff; margin-bottom: 8px; font-weight: 500; }
         .class-meta { font-size: 12px; color: #9ca3af; display: flex; gap: 10px; }
         .btn-join { margin-top: 12px; display: inline-block; background: #3db2ff; color: white; text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: bold; }
@@ -28,27 +24,15 @@
 <body>
 
     <div class="sidebar">
-        <a href="index.html" class="nav-link">
-            <div class="icon-box">📊</div><span>Dash</span>
-        </a>
-        <a href="planner.html" class="nav-link active">
-            <div class="icon-box">📅</div><span>Planner</span>
-        </a>
-        <a href="notes.html" class="nav-link">
-            <div class="icon-box">📚</div><span>Library</span>
-        </a>
-        <a href="tests.html" class="nav-link">
-            <div class="icon-box">🏆</div><span>Tests</span>
-        </a>
+        <a href="index.html" class="nav-link"><div class="icon-box">📊</div><span>Dash</span></a>
+        <a href="planner.html" class="nav-link active"><div class="icon-box">📅</div><span>Planner</span></a>
+        <a href="notes.html" class="nav-link"><div class="icon-box">📚</div><span>Library</span></a>
+        <a href="tests.html" class="nav-link"><div class="icon-box">🏆</div><span>Tests</span></a>
     </div>
 
     <div class="main">
         <h2 style="margin:0;">Today's Schedule</h2>
-        <p style="color:#888; margin-top:5px; margin-bottom:25px;">Ready for your classes, Abhay?</p>
-
-        <div id="schedule-list">
-            <p style="text-align:center; color:#4b5563; margin-top:40px;">Checking Phoenix Database...</p>
-        </div>
+        <div id="schedule-list"><p style="text-align:center; color:#4b5563; margin-top:40px;">Checking Phoenix Database...</p></div>
     </div>
 
     <script>
@@ -61,23 +45,16 @@
         if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
         const db = firebase.firestore();
 
-        // Data Fetching Logic Fixed
         db.collection("classes").onSnapshot((snapshot) => {
             const list = document.getElementById('schedule-list');
             list.innerHTML = "";
-            
-            if (snapshot.empty) {
-                list.innerHTML = "<p style='text-align:center; color:gray; margin-top:50px;'>No classes found. Add from Admin!</p>";
-                return;
-            }
+            if (snapshot.empty) { list.innerHTML = "<p style='text-align:center; color:gray;'>No classes found.</p>"; return; }
 
             snapshot.forEach((doc) => {
                 let d = doc.data();
-                // Sabhi fields ko check kar raha hoon taaki kuch missing na ho
-                let title = d.className || d.topic || "Science Special";
-                let teacher = d.educatorName || d.teacher || "Phoenix Faculty";
-                let date = d.classDate || d.date || "Today";
-                let time = d.classTime || d.time || "Check Schedule";
+                // Teacher ka dala hua title in fields mein ho sakta hai
+                let title = d.className || d.classTitle || d.title || d.topic || "New Class Added";
+                let teacher = d.educatorName || d.teacher || "Phoenix Educator";
                 let link = d.classLink || d.link || "#";
 
                 list.innerHTML += `
@@ -85,8 +62,8 @@
                         <div class="class-name">${title}</div>
                         <div class="educator-name">👨‍🏫 ${teacher}</div>
                         <div class="class-meta">
-                            <span>📅 ${date}</span>
-                            <span>⏰ ${time}</span>
+                            <span>📅 ${d.classDate || d.date || ''}</span>
+                            <span>⏰ ${d.classTime || d.time || ''}</span>
                         </div>
                         <a href="${link}" target="_blank" class="btn-join">JOIN CLASS →</a>
                     </div>`;
