@@ -70,6 +70,7 @@
         <option value="notes">Chapter Notes</option>
     </select>
     <button class="btn btn-blue" onclick="uploadContent()">Publish Now</button>
+    
 </div>
     
     <div class="admin-card">
@@ -167,6 +168,29 @@ async function deleteContent(id) {
         } catch (error) {
             alert("Error: " + error.message);
         }
+    }
+}
+// 6. UPLOAD TEST OR NOTES LOGIC
+async function uploadContent() {
+    const title = document.getElementById('contentTitle').value;
+    const link = document.getElementById('contentLink').value;
+    const type = document.getElementById('contentType').value;
+
+    if(!title || !link) return alert("Bhai, Title aur Link dono bharo!");
+
+    try {
+        await db.collection("academy_content").add({
+            title: title,
+            link: link,
+            type: type,
+            date: new Date().toLocaleDateString()
+        });
+        alert("Shabaash! Upload ho gaya.");
+        // Boxes ko khali karne ke liye
+        document.getElementById('contentTitle').value = '';
+        document.getElementById('contentLink').value = '';
+    } catch (error) {
+        alert("Galti hui: " + error.message);
     }
 }
     
