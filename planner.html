@@ -1,26 +1,50 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planner - Phoenix Academy</title>
     <style>
-        body { background: #0b0f19; color: white; font-family: sans-serif; padding: 15px; }
-        .tab-bar { display: flex; overflow-x: auto; gap: 10px; margin-bottom: 20px; }
-        .tab { background: #1c2128; color: #888; border: none; padding: 8px 15px; border-radius: 20px; white-space: nowrap; }
-        .tab.active { background: #ffbc00; color: black; font-weight: bold; }
-        .class-card { background: #161b22; padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 5px solid #ffbc00; }
+        :root { --primary: #3db2ff; --bg: #0b0f19; --card: #161b22; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: white; display: flex; }
+        
+        /* Sidebar Like Unacademy */
+        .sidebar { width: 240px; background: #0d1117; height: 100vh; padding: 20px; border-right: 1px solid #30363d; position: fixed; }
+        .nav-item { padding: 12px; margin: 8px 0; border-radius: 8px; cursor: pointer; color: #8b949e; display: flex; align-items: center; }
+        .nav-item.active { background: rgba(61, 178, 255, 0.1); color: var(--primary); font-weight: bold; }
+        
+        /* Main Content Area */
+        .main-content { margin-left: 280px; padding: 30px; width: 100%; max-width: 800px; }
+        .today-header { background: linear-gradient(90deg, #1c2128, #0d1117); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #30363d; }
+        
+        /* Class Cards */
+        .class-row { background: var(--card); border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid transparent; transition: 0.3s; }
+        .class-row:hover { border-color: var(--primary); }
+        .class-info h4 { margin: 0; color: #f0f6fc; }
+        .class-info p { margin: 5px 0 0; color: #8b949e; font-size: 13px; }
+        .live-tag { background: #da3633; color: white; font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <h2 style="text-align: center; color: #ffbc00;">Academic Planner</h2>
-    
-    <div class="tab-bar">
-        <button class="tab active">All Classes</button>
-        <button class="tab">Class 10th</button>
-        <button class="tab">Class 12th</button>
+
+    <div class="sidebar">
+        <h2 style="color:var(--primary); font-size: 20px;">Phoenix</h2>
+        <div class="nav-item active">📅 Planner</div>
+        <div class="nav-item">📚 My Library</div>
+        <div class="nav-item">📝 Practice</div>
+        <div class="nav-item">🏆 Tests</div>
     </div>
 
-    <div id="live-list">
-        <p style="text-align:center; color:gray;">Loading classes...</p>
+    <div class="main-content">
+        <div class="today-header">
+            <h2 style="margin:0;">Good evening, Abhay</h2>
+            <p style="color:#8b949e; margin: 5px 0;">You have classes scheduled for today</p>
+        </div>
+
+        <h3 style="font-size: 16px; color: #8b949e; text-transform: uppercase;">Today's Schedule</h3>
+        <div id="live-list">
+            <p style="color:gray;">Syncing with Firebase...</p>
+        </div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -36,16 +60,26 @@
       if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
       const db = firebase.firestore();
 
-      // SIRF CLASSES FETCH KARO (Purana Logic)
-      db.collection("classes").onSnapshot((snapshot) => {
+      // Unacademy Style Data Fetching
+      db.collection("classes").orderBy("classDate", "desc").onSnapshot((snapshot) => {
           const list = document.getElementById('live-list');
           list.innerHTML = "";
+          
+          if(snapshot.empty) {
+              list.innerHTML = "<div style='text-align:center; padding:40px; color:#8b949e;'>No classes today. Take a break!</div>";
+              return;
+          }
+
           snapshot.forEach((doc) => {
               let c = doc.data();
               list.innerHTML += `
-                  <div class="class-card">
-                      <h4 style="margin:0;">${c.className || 'New Class'}</h4>
-                      <p style="font-size:12px; color:#aaa;">${c.classDate} | ${c.classTime}</p>
+                  <div class="class-row">
+                      <div class="class-info">
+                          <span class="live-tag">LIVE</span>
+                          <h4>${c.className || 'New Session'}</h4>
+                          <p>${c.classDate} • ${c.classTime}</p>
+                      </div>
+                      <button style="background:var(--primary); border:none; color:white; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer;">Join Class</button>
                   </div>`;
           });
       });
