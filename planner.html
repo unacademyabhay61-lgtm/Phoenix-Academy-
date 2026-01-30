@@ -1,94 +1,81 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planner - Phoenix Academy</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background-color: #000814; color: white; padding-bottom: 80px; }
-        .planner-header { padding: 20px; text-align: center; color: #ffbc00; }
-        .class-card { background: #1a1a1a; margin: 15px; padding: 15px; border-radius: 12px; border-left: 4px solid #ffbc00; }
-        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #000; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #333; }
-        .nav-item { color: #888; text-decoration: none; text-align: center; font-size: 12px; }
-        .nav-item.active { color: #ffbc00; }
-        .nav-item i { display: block; font-size: 20px; margin-bottom: 5px; }
-        .notes-section { margin: 15px; padding: 10px; background: #0d1117; border-radius: 10px; border: 1px dashed #333; }
+        body { background: #0b0f19; color: white; font-family: sans-serif; padding: 15px; }
+        .tab-bar { display: flex; overflow-x: auto; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .tab-item { background: #1c2128; color: #888; border: none; padding: 8px 16px; border-radius: 20px; white-space: nowrap; font-size: 14px; }
+        .tab-item.active { background: #ffbc00; color: black; font-weight: bold; }
+        .card { background: #161b22; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 5px solid #ffbc00; }
+        .notes-section { background: #0d1117; padding: 10px; border-radius: 10px; border: 1px dashed #3db2ff; margin-top: 30px; }
+        .note-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #222; }
+        .btn-link { color: #3db2ff; text-decoration: none; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="planner-header">
-        <h2>Academic Planner</h2>
+    <h2 style="text-align: center; color: #ffbc00;">Academic Planner</h2>
+
+    <div class="tab-bar">
+        <button class="tab-item active">All Classes</button>
+        <button class="tab-item">Class 10th</button>
+        <button class="tab-item">Class 12th</button>
     </div>
 
     <div id="live-list">
-        <p style="text-align:center; color:gray; margin-top:20px;">Fetching classes...</p>
+        <p style="text-align:center; color:gray;">Connecting to Database...</p>
     </div>
 
     <div class="notes-section">
-        <h4 style="color: #3db2ff; margin-bottom: 10px;"><i class="fas fa-file-pdf"></i> Study Material</h4>
+        <h3 style="color: #3db2ff; margin-top: 0;">📚 Study Notes & Diagrams</h3>
         <div id="notes-list">
-            <p style="font-size:12px; color:gray;">No notes yet.</p>
+            <p style="text-align:center; color:gray; font-size:12px;">Looking for notes...</p>
         </div>
-    </div>
-
-    <div class="bottom-nav">
-        <a href="index.html" class="nav-item">
-            <i class="fas fa-home"></i>Home
-        </a>
-        <a href="planner.html" class="nav-item active">
-            <i class="fas fa-calendar-alt"></i>Planner
-        </a>
-        <a href="tests.html" class="nav-item">
-            <i class="fas fa-edit"></i>Tests
-        </a>
-        <a href="profile.html" class="nav-item">
-            <i class="fas fa-user"></i>Profile
-        </a>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
+      // Firebase Config
       const firebaseConfig = {
         apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDaWIHRYCfT8",
         authDomain: "phnoenix-coaching.firebaseapp.com",
         projectId: "phnoenix-coaching",
         appId: "1:56032052098:web:43d562162215be0eb3459b"
       };
-      firebase.initializeApp(firebaseConfig);
+      
+      if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+      }
       const db = firebase.firestore();
 
-      // Classes Load Karein
-      db.collection("classes").orderBy("classDate", "desc").onSnapshot((snapshot) => {
-          const liveList = document.getElementById('live-list');
-          liveList.innerHTML = "";
+      // LOGIC 1: FETCH CLASSES (Aapka purana data)
+      // Check karein ki aapka collection 'classes' hi tha na?
+      db.collection("classes").onSnapshot((snapshot) => {
+          const list = document.getElementById('live-list');
+          list.innerHTML = "";
+          if(snapshot.empty) {
+              list.innerHTML = "<p style='text-align:center;'>No classes found in database.</p>";
+              return;
+          }
           snapshot.forEach((doc) => {
               let c = doc.data();
-              liveList.innerHTML += `
-                  <div class="class-card">
-                      <h4 style="margin:0;">${c.className}</h4>
-                      <p style="font-size:12px; color:#aaa; margin:5px 0;">${c.classDate} | ${c.classTime}</p>
+              list.innerHTML += `
+                  <div class="card">
+                      <h4 style="margin:0;">${c.className || 'Scheduled Class'}</h4>
+                      <p style="font-size:12px; color:#aaa; margin:5px 0;">${c.classDate || ''} | ${c.classTime || ''}</p>
                   </div>`;
           });
+      }, (error) => {
+          console.error("Error fetching classes: ", error);
       });
 
-      // Notes Load Karein
+      // LOGIC 2: FETCH NOTES
       db.collection("academy_content").where("type", "==", "notes").onSnapshot((snapshot) => {
-          const notesList = document.getElementById('notes-list');
-          notesList.innerHTML = "";
-          snapshot.forEach((doc) => {
-              let n = doc.data();
-              notesList.innerHTML += `
-                  <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #222;">
-                      <span style="font-size:13px;">${n.title}</span>
-                      <a href="${n.link}" target="_blank" style="color:#ffbc00; font-size:12px;">OPEN</a>
-                  </div>`;
-          });
-      });
-    </script>
-</body>
-</html>
+          const nList = document.getElementById('notes-list');
+          nList.innerHTML = "";
+          if(snapshot.empty) {
+              nList.innerHTML = "<p style='text-align:center; font-size
+                  
