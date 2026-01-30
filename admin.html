@@ -70,13 +70,14 @@
     </div>
     
     <div class="admin-card">
-        <h3>🛠️ Live Class Manager</h3>
-        <div id="live-list">Loading classes...</div>
-    </div>
-
-    <div class="admin-card">
         <h3 style="color: #ffbc00;">📊 Student Analytics</h3>
         <div id="analytics-list">Loading records...</div>
+    </div>
+
+    <div class="admin-card" style="border-color: #ffbc00; text-align: center;">
+        <h3 style="color: #ffbc00;">🛠️ System Tools</h3>
+        <p style="font-size: 11px; color: #888;">Purane tests nahi dikh rahe? Isse theek karein:</p>
+        <button class="btn" style="background: #ffbc00; color: black;" onclick="fixMissingClasses()">🔧 Fix Missing Classes</button>
     </div>
 </div>
 
@@ -93,6 +94,31 @@
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.firestore();
 
+    // Fix Old Tests Function
+    async function fixMissingClasses() {
+        const cls = prompt("Purane tests kis class mein daalne hain? (9th, 10th, 11th, 12th, NEET UG)");
+        if(!cls) return;
+        
+        const btn = event.target;
+        btn.innerText = "⏳ Fixing... Please wait";
+        btn.disabled = true;
+
+        const snap = await db.collection("polls").get();
+        const batch = db.batch();
+        let count = 0;
+
+        snap.forEach(doc => {
+            if(!doc.data().targetClass) {
+                batch.update(doc.ref, { targetClass: cls });
+                count++;
+            }
+        });
+
+        await batch.commit();
+        alert(`🎉 Success! ${count} sawal ab Class ${cls} mein dikhenge.`);
+        location.reload();
+    }
+
     function addClass() {
         const data = {
             teacher: document.getElementById('teacherName').value,
@@ -107,20 +133,6 @@
         db.collection("classes").add(data).then(() => { alert("Class Added!"); location.reload(); });
     }
 
-    function loadClasses() {
-        db.collection("classes").orderBy("createdAt", "desc").onSnapshot(snap => {
-            const div = document.getElementById('live-list');
-            div.innerHTML = "";
-            snap.forEach(doc => {
-                const cls = doc.data();
-                div.innerHTML += `<div class="list-item">
-                    <span><b>${cls.title}</b> <small>(${cls.targetClass})</small><br><small>${cls.date}</small></span>
-                    <button class="btn-red" onclick="deleteDoc('classes','${doc.id}')">DEL</button>
-                </div>`;
-            });
-        });
-    }
-
     async function uploadBulkQuiz() {
         const rawData = document.getElementById('bulkJsonInput').value;
         const chapName = document.getElementById('chapterNameInput').value;
@@ -128,7 +140,6 @@
         const btn = document.getElementById('bulkUploadBtn');
 
         if(!chapName || !rawData) return alert("Details missing!");
-        
         btn.innerText = "⏳ Uploading...";
         btn.disabled = true;
 
@@ -169,7 +180,7 @@
             container.innerHTML = "";
             Object.keys(groups).forEach(chapter => {
                 const qList = groups[chapter];
-                const targetCls = qList[0].targetClass || "No Class";
+                const targetCls = qList[0].targetClass || "No Class Assigned";
                 const chapterId = chapter.replace(/\s+/g, '');
                 
                 const html = `
@@ -199,7 +210,7 @@
 
     function toggleList(id) {
         const el = document.getElementById('list-' + id);
-        el.classList.toggle('hidden');
+        if(el) el.classList.toggle('hidden');
     }
 
     async function deleteEntireChapter(chapName) {
@@ -212,7 +223,7 @@
     }
 
     function loadAnalytics() {
-        db.collection("test_results").orderBy("timestamp", "desc").limit(15).onSnapshot(snap => {
+        db.collection("test_results").orderBy("timestamp", "desc").limit(10).onSnapshot(snap => {
             const div = document.getElementById('analytics-list');
             div.innerHTML = "";
             snap.forEach(doc => {
@@ -227,7 +238,7 @@
         if(confirm("Pakka?")) db.collection(coll).doc(id).delete();
     }
 
-    window.onload = () => { loadClasses(); loadGroupedManager(); loadAnalytics(); };
+    window.onload = () => { loadGroupedManager(); loadAnalytics(); };
 </script>
 </body>
 </html>
