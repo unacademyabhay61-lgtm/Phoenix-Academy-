@@ -111,15 +111,13 @@
             });
         });
     }
-
-// --- 3. Bulk Upload (Updated with Chapter Name) ---
+// --- 3. Bulk Upload (Chapter System ke saath) ---
 async function uploadBulkQuiz() {
     const rawData = document.getElementById('bulkJsonInput').value;
-    const chapName = document.getElementById('chapterNameInput').value; // Naya Input fetch kiya
+    const chapName = document.getElementById('chapterNameInput') ? document.getElementById('chapterNameInput').value : "General";
     const btn = document.getElementById('bulkUploadBtn');
 
-    if(!chapName.trim()) return alert("Bhai, pehle Chapter ka naam toh dalo!");
-    if(!rawData.trim()) return alert("JSON paste karo!");
+    if(!rawData.trim()) return alert("Bhai, pehle JSON toh dalo!");
     
     btn.innerText = "⏳ Uploading...";
     btn.disabled = true;
@@ -127,16 +125,30 @@ async function uploadBulkQuiz() {
     try {
         const questions = JSON.parse(rawData);
         const batch = db.batch();
-        
+
         questions.forEach((q) => {
-            const docRef = db.collection("polls").doc();
-            // Yahan hum 'chapter' field bhi add kar rahe hain
-            batch.set(docRef, { 
-                ...q, 
-                chapter: chapName, 
-                timestamp: firebase.firestore.FieldValue.serverTimestamp() 
+            const docRef = db.collection("polls").doc(); 
+            batch.set(docRef, {
+                question: q.question,
+                options: q.options,
+                answer: q.answer,
+                chapter: chapName, // Har sawal ke saath chapter name save hoga
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
         });
+
+        await batch.commit();
+        alert("🎉 Mubarak ho! " + chapName + " ke questions upload ho gaye.");
+        document.getElementById('bulkJsonInput').value = "";
+    } catch (e) {
+        console.error(e);
+        alert("❌ JSON Format mein galti hai! Check karo.");
+    } finally {
+        btn.innerText = "🚀 UPLOAD 50 QUESTIONS NOW";
+        btn.disabled = false;
+    }
+}
+    
 
         await batch.commit();
         alert("🎉 " + chapName + " ke questions upload ho gaye!");
