@@ -1,56 +1,107 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Student Portal - Phoenix Academy</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phoenix Academy - Online Test</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
-        body { background: #000; color: white; font-family: sans-serif; }
-        .test-card { background: #1a1a1a; padding: 15px; border-radius: 12px; margin: 15px; border-left: 5px solid #3db2ff; }
-        .btn-view { display: inline-block; background: #3db2ff; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; margin-top: 10px; font-weight: bold; }
+        body { margin: 0; font-family: sans-serif; background: #0b0f19; color: white; display: flex; height: 100vh; }
+        .sidebar { width: 85px; background: #0d1117; border-right: 1px solid #1f2937; display: flex; flex-direction: column; align-items: center; padding-top: 25px; gap: 25px; }
+        .nav-link { text-decoration: none; color: #9ca3af; font-size: 10px; text-align: center; display: flex; flex-direction: column; gap: 6px; }
+        .nav-link.active { color: #3db2ff; }
+        .icon-box { width: 42px; height: 42px; background: #161b22; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .active .icon-box { background: rgba(61, 178, 255, 0.1); border: 1px solid #3db2ff; color: #3db2ff; }
+
+        .main { flex: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #quiz-container { background: #161b22; width: 100%; max-width: 500px; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .option-btn { width: 100%; background: #1c2128; border: 1px solid #333; color: white; padding: 15px; margin-top: 10px; border-radius: 12px; text-align: left; cursor: pointer; transition: 0.3s; }
+        .option-btn:hover { border-color: #3db2ff; background: #252d38; }
+        .option-btn.selected { background: #3db2ff; color: white; border-color: #3db2ff; }
+        #next-btn { background: #3db2ff; color: white; border: none; padding: 12px 30px; border-radius: 10px; margin-top: 20px; font-weight: bold; cursor: pointer; display: none; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-    <h2 style="text-align:center; color:#3db2ff;">📚 Study Material & Tests</h2>
-
-    <div id="test-list">
-        <p style="text-align:center; color:gray;">Loading...</p>
+    <div class="sidebar">
+        <a href="dashboard.html" class="nav-link"><div class="icon-box">📊</div><span>Dash</span></a>
+        <a href="planner.html" class="nav-link"><div class="icon-box">📅</div><span>Planner</span></a>
+        <a href="tests.html" class="nav-link active"><div class="icon-box">🏆</div><span>Tests</span></a>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <div class="main">
+        <div id="quiz-container">
+            <div id="question-area">
+                <h3 id="q-text">Loading Questions...</h3>
+                <div id="options-list"></div>
+                <button id="next-btn" onclick="nextQuestion()">Next Question →</button>
+            </div>
+            <div id="result-area" class="hidden">
+                <h2 style="color:#3db2ff">Test Completed! 🎉</h2>
+                <p id="score-text" style="font-size: 24px;"></p>
+                <button onclick="location.reload()" style="background:#1c2128; color:white; border:1px solid #333; padding:10px 20px; border-radius:10px;">Retake Test</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-      // 1. Firebase Config
-      const firebaseConfig = {
-        apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDaWIHRYCfT8",
-        authDomain: "phnoenix-coaching.firebaseapp.com",
-        projectId: "phnoenix-coaching",
-        appId: "1:56032052098:web:43d562162215be0eb3459b"
-      };
-      firebase.initializeApp(firebaseConfig);
-      const db = firebase.firestore();
+        const firebaseConfig = {
+            apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDaWIHRYCfT8",
+            authDomain: "phnoenix-coaching.firebaseapp.com",
+            projectId: "phnoenix-coaching",
+            appId: "1:56032052098:web:43d562162215be0eb3459b"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
-      // 2. Data Fetching Logic
-      db.collection("academy_content").onSnapshot((snapshot) => {
-          const container = document.getElementById('test-list');
-          container.innerHTML = ""; 
+        let questions = [];
+        let currentIdx = 0;
+        let score = 0;
 
-          if(snapshot.empty) {
-              container.innerHTML = "<p style='text-align:center;'>Abhi koi material nahi hai.</p>";
-              return;
-          }
+        // Fetch Questions from Admin [Collection Name: 'polls']
+        db.collection("polls").onSnapshot((snapshot) => {
+            questions = [];
+            snapshot.forEach(doc => questions.push(doc.data()));
+            if(questions.length > 0) showQuestion();
+            else document.getElementById('q-text').innerText = "No Tests available right now.";
+        });
 
-          snapshot.forEach((doc) => {
-              let data = doc.data();
-              container.innerHTML += `
-                  <div class="test-card">
-                      <h3 style="margin:0;">${data.title}</h3>
-                      <p style="font-size:12px; color:#888;">Published on: ${data.date}</p>
-                      <a href="${data.link}" target="_blank" class="btn-view">VIEW / DOWNLOAD</a>
-                  </div>`;
-          });
-      });
+        function showQuestion() {
+            let q = questions[currentIdx];
+            document.getElementById('q-text').innerText = q.question;
+            const optList = document.getElementById('options-list');
+            optList.innerHTML = "";
+            document.getElementById('next-btn').style.display = "none";
+
+            q.options.forEach((opt, i) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn";
+                btn.innerText = opt;
+                btn.onclick = () => selectOption(btn, opt === q.answer);
+                optList.appendChild(btn);
+            });
+        }
+
+        function selectOption(btn, isCorrect) {
+            document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            if(isCorrect) score++;
+            document.getElementById('next-btn').style.display = "block";
+        }
+
+        function nextQuestion() {
+            currentIdx++;
+            if(currentIdx < questions.length) showQuestion();
+            else showResult();
+        }
+
+        function showResult() {
+            document.getElementById('question-area').classList.add('hidden');
+            document.getElementById('result-area').classList.remove('hidden');
+            document.getElementById('score-text').innerText = `Your Score: ${score} / ${questions.length}`;
+        }
     </script>
 </body>
 </html>
