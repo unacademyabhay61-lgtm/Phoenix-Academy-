@@ -3,27 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phoenix Admin | Ultimate Control</title>
-    <script src="https://meet.jit.si/external_api.js"></script>
+    <title>Phoenix Admin | Final Control</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #3db2ff; --notice: #ffbc00; --danger: #ff4444; --bg: #0b0c0e; --card: #16181c; }
-        body { background: var(--bg); color: white; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding-bottom: 30px; }
+        :root { --primary: #3db2ff; --danger: #ff4444; --bg: #0b0c0e; --card: #16181c; }
+        body { background: var(--bg); color: white; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; }
         .tab-bar { display: flex; background: var(--card); border-bottom: 1px solid #2a2d32; position: sticky; top: 0; z-index: 1000; }
-        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: 800; font-size: 11px; color: #555; text-transform: uppercase; }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-size: 11px; font-weight: 800; color: #555; }
         .tab.active { color: var(--primary); border-bottom: 3px solid var(--primary); background: #1e2126; }
         .container { max-width: 450px; margin: auto; padding: 15px; }
         .section { display: none; }
         .section.active { display: block; }
         .admin-card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #2a2d32; margin-bottom: 20px; }
-        h3 { margin: 0 0 15px 0; color: var(--primary); font-size: 16px; display: flex; align-items: center; gap: 8px; }
         input, select, textarea { width: 100%; padding: 12px; background: #000; border: 1px solid #333; color: white; border-radius: 12px; margin-bottom: 10px; outline: none; }
         .btn { width: 100%; padding: 14px; border: none; color: white; font-weight: 700; border-radius: 12px; cursor: pointer; text-transform: uppercase; font-size: 12px; }
         .list-item { background: #000; padding: 15px; border-radius: 15px; margin-bottom: 10px; border-left: 4px solid var(--primary); }
-        .q-item { background: #16181c; padding: 10px; border-radius: 10px; margin-top: 8px; border: 1px solid #222; font-size: 12px; display: flex; justify-content: space-between; }
-        .badge { background: #333; padding: 4px 8px; border-radius: 6px; font-size: 10px; margin-bottom: 5px; display: inline-block; }
-        #live-container { width: 100%; height: 450px; border-radius: 20px; overflow: hidden; display: none; margin-top: 15px; border: 2px solid var(--danger); }
-        .view-qs-btn { color: var(--primary); background: none; border: none; font-size: 11px; cursor: pointer; text-decoration: underline; padding: 0; margin-top: 10px; }
+        #live-frame { width: 100%; height: 550px; border: none; border-radius: 20px; display: none; margin-top: 15px; }
+        .q-row { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #222; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -38,44 +34,34 @@
     <div id="live-sec" class="section active">
         <div class="admin-card">
             <h3>🔴 Schedule Class</h3>
+            <input type="text" id="liveTopic" placeholder="Topic Name">
             <select id="liveClassTarget">
                 <option value="9th">9th</option><option value="10th">10th</option>
                 <option value="11th">11th</option><option value="12th">12th</option>
                 <option value="NEET UG">NEET UG</option>
             </select>
-            <input type="text" id="liveTopic" placeholder="Topic Name">
             <input type="datetime-local" id="liveTime">
-            <button class="btn" style="background:var(--primary)" onclick="saveSchedule()">📅 SAVE TO SCHEDULE</button>
+            <button class="btn" style="background:var(--primary)" onclick="saveSchedule()">📅 SAVE SCHEDULE</button>
         </div>
-        <div class="admin-card">
-            <h3>📅 Upcoming Sessions</h3>
-            <div id="upcoming-list">Loading...</div>
-            <div id="live-container"></div>
-        </div>
+        <div id="upcoming-list"></div>
+        <iframe id="live-frame" allow="camera; microphone; display-capture; fullscreen"></iframe>
+        <button id="stop-btn" class="btn" style="display:none; background:var(--danger); margin-top:10px;" onclick="stopLive()">⏹ END LIVE SESSION</button>
     </div>
 
     <div id="test-sec" class="section">
         <div class="admin-card">
             <h3>🚀 Create Bulk Test</h3>
-            <select id="targetClassTest">
-                <option value="9th">9th</option><option value="10th">10th</option>
-                <option value="11th">11th</option><option value="12th">12th</option>
-                <option value="NEET UG">NEET UG</option>
-            </select>
             <input type="text" id="chapterNameInput" placeholder="Chapter Name">
-            <textarea id="bulkJsonInput" placeholder='Paste JSON here...' style="height: 100px;"></textarea>
+            <textarea id="bulkJsonInput" placeholder="Paste JSON here..." style="height: 100px;"></textarea>
             <button class="btn" style="background:var(--primary)" onclick="uploadBulkQuiz()">UPLOAD TEST</button>
         </div>
-        <div class="admin-card">
-            <h3>📂 Chapter-wise Management</h3>
-            <div id="chapters-list">Loading...</div>
-        </div>
+        <div id="chapters-list"></div>
     </div>
 
     <div id="data-sec" class="section">
         <div class="admin-card">
             <h3>📊 Recent Results</h3>
-            <div id="results-list" class="scroll-box">Loading results...</div>
+            <div id="results-list">Loading Results...</div>
         </div>
     </div>
 </div>
@@ -93,6 +79,8 @@
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.firestore();
 
+    let currentActiveTarget = "";
+
     function showSec(id, el) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -100,46 +88,56 @@
         el.classList.add('active');
     }
 
-    // --- SCHEDULE & LIVE ---
+    // --- LIVE FIX (No 5 Min Limit) ---
     async function saveSchedule() {
-        const cls = document.getElementById('liveClassTarget').value;
         const topic = document.getElementById('liveTopic').value;
+        const cls = document.getElementById('liveClassTarget').value;
         const time = document.getElementById('liveTime').value;
-        if(!topic || !time) return alert("Details bhariye!");
-        await db.collection("live_classes").add({ targetClass: cls, topic, time, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-        alert("Schedule Saved!");
+        if(!topic || !time) return alert("Fill details!");
+        await db.collection("live_classes").add({ topic, targetClass: cls, time, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+        alert("Scheduled!");
     }
 
-    function loadSchedule() {
+    function loadLive() {
         db.collection("live_classes").orderBy("time", "asc").onSnapshot(snap => {
             let h = "";
             snap.forEach(doc => {
                 const d = doc.data();
                 h += `<div class="list-item">
-                    <div style="display:flex; justify-content:space-between">
-                        <div><b>${d.topic}</b><br><small>${d.targetClass} | ${d.time}</small></div>
-                        <button style="color:red; background:none; border:none; cursor:pointer;" onclick="deleteDoc('live_classes','${doc.id}')">✖</button>
-                    </div>
-                    <button class="btn" style="background:#2ecc71; margin-top:10px; padding:10px;" onclick="goLive('${d.targetClass}','${d.topic}','${doc.id}')">START LIVE</button>
+                    <b>${d.topic}</b><br><small>${d.targetClass} | ${d.time}</small>
+                    <button class="btn" style="background:#2ecc71; margin-top:10px;" onclick="startLive('${d.targetClass}','${d.topic}','${doc.id}')">START LIVE NOW</button>
                 </div>`;
             });
-            document.getElementById('upcoming-list').innerHTML = h || "No schedule.";
+            document.getElementById('upcoming-list').innerHTML = h;
         });
     }
 
-    async function goLive(cls, topic, docId) {
-        const roomID = "Phoenix_" + cls + "_" + Date.now();
-        document.getElementById('live-container').style.display = "block";
-        new JitsiMeetExternalAPI("meet.jit.si", { roomName: roomID, width: '100%', height: 450, parentNode: document.querySelector('#live-container'), configOverwrite: { disableDeepLinking: true } });
-        await db.collection("current_live").doc(cls).set({ topic, roomID, status: "online" });
-        await db.collection("live_classes").doc(docId).delete();
+    function startLive(cls, topic, id) {
+        currentActiveTarget = cls;
+        const room = "Phoenix_" + cls + "_" + Date.now();
+        // Using direct iframe link to bypass Jitsi API restrictions
+        const jitsiUrl = `https://meet.jit.si/${room}#config.prejoinPageEnabled=false&interfaceConfig.ALPHAV_ERASED=true`;
+        
+        const frame = document.getElementById('live-frame');
+        frame.src = jitsiUrl;
+        frame.style.display = "block";
+        document.getElementById('stop-btn').style.display = "block";
+        document.getElementById('upcoming-list').style.display = "none";
+
+        db.collection("current_live").doc(cls).set({ topic, roomID: room, status: "online" });
+        db.collection("live_classes").doc(id).delete();
     }
 
-    // --- SMART TEST MANAGEMENT ---
+    async function stopLive() {
+        if(currentActiveTarget) await db.collection("current_live").doc(currentActiveTarget).update({ status: "offline" });
+        location.reload();
+    }
+
+    // --- DUAL TEST DELETE FIX ---
     async function uploadBulkQuiz() {
         const raw = document.getElementById('bulkJsonInput').value;
         const chap = document.getElementById('chapterNameInput').value;
-        const cls = document.getElementById('targetClassTest').value;
+        const cls = document.getElementById('liveClassTarget').value; // Uses same class selector
         try {
             const qs = JSON.parse(raw);
             const batch = db.batch();
@@ -148,76 +146,59 @@
                 batch.set(ref, { ...q, chapter: chap, targetClass: cls, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
             });
             await batch.commit();
-            alert("Chapter Uploaded!");
-            document.getElementById('bulkJsonInput').value = "";
+            alert("Uploaded!");
         } catch(e) { alert("JSON Error!"); }
     }
 
-    function loadChapters() {
+    function loadTests() {
         db.collection("polls").onSnapshot(snap => {
             let chapters = {};
             snap.forEach(doc => {
                 const d = doc.data();
-                if(!chapters[d.chapter]) chapters[d.chapter] = { cls: d.targetClass, questions: [] };
-                chapters[d.chapter].questions.push({ id: doc.id, text: d.question });
+                if(!chapters[d.chapter]) chapters[d.chapter] = [];
+                chapters[d.chapter].push({ id: doc.id, text: d.question });
             });
-
             let h = "";
             for(let name in chapters) {
-                h += `<div class="list-item" style="border-left-color:var(--notice)">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div><span class="badge">${chapters[name].cls}</span><br><b>${name}</b></div>
-                        <button class="btn" style="background:var(--danger); width:auto; padding:5px 10px; font-size:10px;" onclick="deleteFullChapter('${name}')">DELETE TEST</button>
+                h += `<div class="list-item">
+                    <div style="display:flex; justify-content:space-between">
+                        <b>${name}</b>
+                        <button style="color:red; background:none; border:none;" onclick="deleteChapter('${name}')">DELETE FULL TEST</button>
                     </div>
-                    <button class="view-qs-btn" onclick="toggleQs('${name.replace(/\s+/g, '')}')">View/Edit Questions ↓</button>
-                    <div id="qs-${name.replace(/\s+/g, '')}" style="display:none; margin-top:10px;">`;
-                
-                chapters[name].questions.forEach(q => {
-                    h += `<div class="q-item">
-                        <span>${q.text.substring(0, 35)}...</span>
-                        <span style="color:red; cursor:pointer;" onclick="deleteDoc('polls','${q.id}')">✖</span>
-                    </div>`;
+                    <div style="margin-top:10px; border-top:1px solid #222;">`;
+                chapters[name].forEach(q => {
+                    h += `<div class="q-row"><span>${q.text.substring(0,30)}...</span><span onclick="deleteDoc('polls','${q.id}')" style="color:red; cursor:pointer">✖</span></div>`;
                 });
-                
                 h += `</div></div>`;
             }
-            document.getElementById('chapters-list').innerHTML = h || "No tests.";
+            document.getElementById('chapters-list').innerHTML = h;
         });
     }
 
-    function toggleQs(id) {
-        const el = document.getElementById('qs-' + id);
-        el.style.display = el.style.display === "none" ? "block" : "none";
-    }
-
-    async function deleteFullChapter(name) {
-        if(!confirm(`Poora test "${name}" delete karein?`)) return;
+    async function deleteChapter(name) {
+        if(!confirm("Poora test uda dein?")) return;
         const snap = await db.collection("polls").where("chapter", "==", name).get();
         const batch = db.batch();
         snap.forEach(doc => batch.delete(doc.ref));
         await batch.commit();
-        alert("Deleted!");
     }
 
-    // --- DATA SECTION FIX ---
-    function loadResults() {
-        db.collection("test_results").orderBy("timestamp", "desc").limit(20).onSnapshot(snap => {
+    // --- DATA LOAD FIX ---
+    function loadData() {
+        db.collection("test_results").orderBy("timestamp", "desc").limit(15).onSnapshot(snap => {
             let h = "";
-            if(snap.empty) { h = "<p style='text-align:center; color:#666;'>No results yet.</p>"; }
             snap.forEach(doc => {
                 const r = doc.data();
-                h += `<div class="res-card" style="background:#000; padding:12px; border-radius:12px; margin-bottom:8px; border-left:3px solid var(--primary); display:flex; justify-content:space-between;">
-                    <div><b>${r.student || 'Unknown'}</b><br><small>${r.subject || 'Test'}</small></div>
-                    <div style="color:var(--notice); font-weight:800;">${r.score}/${r.total}</div>
+                h += `<div class="list-item" style="border-left-color:orange">
+                    <b>${r.student}</b> - ${r.score}/${r.total}<br><small>${r.subject}</small>
                 </div>`;
             });
-            document.getElementById('results-list').innerHTML = h;
+            document.getElementById('results-list').innerHTML = h || "No data.";
         });
     }
 
-    async function deleteDoc(c, i) { if(confirm("Confirm Delete?")) await db.collection(c).doc(i).delete(); }
-
-    window.onload = () => { loadSchedule(); loadChapters(); loadResults(); };
+    async function deleteDoc(c, i) { if(confirm("Delete?")) await db.collection(c).doc(i).delete(); }
+    window.onload = () => { loadLive(); loadTests(); loadData(); };
 </script>
 </body>
 </html>
