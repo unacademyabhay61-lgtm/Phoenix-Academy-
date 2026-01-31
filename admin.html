@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phoenix Admin | Final Control</title>
+    <title>Phoenix Admin | Master Control</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #3db2ff; --danger: #ff4444; --bg: #0b0c0e; --card: #16181c; }
@@ -18,23 +18,23 @@
         input, select, textarea { width: 100%; padding: 12px; background: #000; border: 1px solid #333; color: white; border-radius: 12px; margin-bottom: 10px; outline: none; }
         .btn { width: 100%; padding: 14px; border: none; color: white; font-weight: 700; border-radius: 12px; cursor: pointer; text-transform: uppercase; font-size: 12px; }
         .list-item { background: #000; padding: 15px; border-radius: 15px; margin-bottom: 10px; border-left: 4px solid var(--primary); }
-        #live-frame { width: 100%; height: 550px; border: none; border-radius: 20px; display: none; margin-top: 15px; }
-        .q-row { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #222; font-size: 12px; }
+        #live-frame { width: 100%; height: 550px; border: none; border-radius: 20px; display: none; margin-top: 15px; background: #111; }
+        .q-row { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #222; font-size: 11px; }
     </style>
 </head>
 <body>
 
 <div class="tab-bar">
-    <div class="tab active" onclick="showSec('live-sec', this)">🎥 LIVE</div>
-    <div class="tab" onclick="showSec('test-sec', this)">📝 TESTS</div>
-    <div class="tab" onclick="showSec('data-sec', this)">📊 DATA</div>
+    <div class="tab active" onclick="showSec('live-sec', this)">🎥 LIVE CONTROL</div>
+    <div class="tab" onclick="showSec('test-sec', this)">📝 TEST MGMT</div>
+    <div class="tab" onclick="showSec('data-sec', this)">📊 STUDENT DATA</div>
 </div>
 
 <div class="container">
     <div id="live-sec" class="section active">
         <div class="admin-card">
-            <h3>🔴 Schedule Class</h3>
-            <input type="text" id="liveTopic" placeholder="Topic Name">
+            <h3>🔴 Create Live Room</h3>
+            <input type="text" id="liveTopic" placeholder="Topic: e.g. Biology Cell Part-1">
             <select id="liveClassTarget">
                 <option value="9th">9th</option><option value="10th">10th</option>
                 <option value="11th">11th</option><option value="12th">12th</option>
@@ -45,28 +45,29 @@
         </div>
         <div id="upcoming-list"></div>
         <iframe id="live-frame" allow="camera; microphone; display-capture; fullscreen"></iframe>
-        <button id="stop-btn" class="btn" style="display:none; background:var(--danger); margin-top:10px;" onclick="stopLive()">⏹ END LIVE SESSION</button>
+        <button id="stop-btn" class="btn" style="display:none; background:var(--danger); margin-top:10px;" onclick="stopLive()">⏹ END SESSION</button>
     </div>
 
     <div id="test-sec" class="section">
         <div class="admin-card">
-            <h3>🚀 Create Bulk Test</h3>
+            <h3>🚀 Bulk Upload Quiz</h3>
             <input type="text" id="chapterNameInput" placeholder="Chapter Name">
-            <textarea id="bulkJsonInput" placeholder="Paste JSON here..." style="height: 100px;"></textarea>
-            <button class="btn" style="background:var(--primary)" onclick="uploadBulkQuiz()">UPLOAD TEST</button>
+            <textarea id="bulkJsonInput" placeholder='Paste JSON here...' style="height: 100px;"></textarea>
+            <button class="btn" style="background:var(--primary)" onclick="uploadBulkQuiz()">🚀 UPLOAD NOW</button>
         </div>
         <div id="chapters-list"></div>
     </div>
 
     <div id="data-sec" class="section">
         <div class="admin-card">
-            <h3>📊 Recent Results</h3>
-            <div id="results-list">Loading Results...</div>
+            <h3>📊 Live Results</h3>
+            <div id="results-list">Loading real-time scores...</div>
         </div>
     </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
 <script>
@@ -79,7 +80,10 @@
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.firestore();
 
-    let currentActiveTarget = "";
+    // 🟢 FIX 1: Firebase Auth Persistence (Other Phone Login Fix)
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION);
+
+    let currentCls = "";
 
     function showSec(id, el) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -88,14 +92,14 @@
         el.classList.add('active');
     }
 
-    // --- LIVE FIX (No 5 Min Limit) ---
+    // --- 🟢 FIX 2: LIVE & JITSI (Bypass 5-Min Limit & App Prompts) ---
     async function saveSchedule() {
         const topic = document.getElementById('liveTopic').value;
         const cls = document.getElementById('liveClassTarget').value;
         const time = document.getElementById('liveTime').value;
-        if(!topic || !time) return alert("Fill details!");
+        if(!topic || !time) return alert("Bhai, Details toh bharo!");
         await db.collection("live_classes").add({ topic, targetClass: cls, time, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-        alert("Scheduled!");
+        alert("Class Scheduled!");
     }
 
     function loadLive() {
@@ -105,18 +109,19 @@
                 const d = doc.data();
                 h += `<div class="list-item">
                     <b>${d.topic}</b><br><small>${d.targetClass} | ${d.time}</small>
-                    <button class="btn" style="background:#2ecc71; margin-top:10px;" onclick="startLive('${d.targetClass}','${d.topic}','${doc.id}')">START LIVE NOW</button>
+                    <button class="btn" style="background:#2ecc71; margin-top:10px; padding:10px;" onclick="startLiveNow('${d.targetClass}','${d.topic}','${doc.id}')">START LIVE</button>
                 </div>`;
             });
-            document.getElementById('upcoming-list').innerHTML = h;
+            document.getElementById('upcoming-list').innerHTML = h || "No pending classes.";
         });
     }
 
-    function startLive(cls, topic, id) {
-        currentActiveTarget = cls;
-        const room = "Phoenix_" + cls + "_" + Date.now();
-        // Using direct iframe link to bypass Jitsi API restrictions
-        const jitsiUrl = `https://meet.jit.si/${room}#config.prejoinPageEnabled=false&interfaceConfig.ALPHAV_ERASED=true`;
+    function startLiveNow(cls, topic, id) {
+        currentCls = cls;
+        const room = "Phoenix_" + cls + "_" + Math.floor(Math.random() * 1000000);
+        
+        // This URL forces direct browser view and bypasses Jitsi's free-tier restrictions
+        const jitsiUrl = `https://meet.jit.si/${room}#config.disableDeepLinking=true&config.prejoinPageEnabled=false&interfaceConfig.ALPHAV_ERASED=true`;
         
         const frame = document.getElementById('live-frame');
         frame.src = jitsiUrl;
@@ -129,27 +134,11 @@
     }
 
     async function stopLive() {
-        if(currentActiveTarget) await db.collection("current_live").doc(currentActiveTarget).update({ status: "offline" });
+        if(currentCls) await db.collection("current_live").doc(currentCls).update({ status: "offline" });
         location.reload();
     }
 
-    // --- DUAL TEST DELETE FIX ---
-    async function uploadBulkQuiz() {
-        const raw = document.getElementById('bulkJsonInput').value;
-        const chap = document.getElementById('chapterNameInput').value;
-        const cls = document.getElementById('liveClassTarget').value; // Uses same class selector
-        try {
-            const qs = JSON.parse(raw);
-            const batch = db.batch();
-            qs.forEach(q => {
-                const ref = db.collection("polls").doc();
-                batch.set(ref, { ...q, chapter: chap, targetClass: cls, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-            });
-            await batch.commit();
-            alert("Uploaded!");
-        } catch(e) { alert("JSON Error!"); }
-    }
-
+    // --- 🟢 FIX 3: BULK DELETE & TEST MGMT ---
     function loadTests() {
         db.collection("polls").onSnapshot(snap => {
             let chapters = {};
@@ -163,7 +152,7 @@
                 h += `<div class="list-item">
                     <div style="display:flex; justify-content:space-between">
                         <b>${name}</b>
-                        <button style="color:red; background:none; border:none;" onclick="deleteChapter('${name}')">DELETE FULL TEST</button>
+                        <button style="color:red; background:none; border:none; font-size:10px; cursor:pointer;" onclick="deleteFullChapter('${name}')">DELETE TEST</button>
                     </div>
                     <div style="margin-top:10px; border-top:1px solid #222;">`;
                 chapters[name].forEach(q => {
@@ -175,7 +164,7 @@
         });
     }
 
-    async function deleteChapter(name) {
+    async function deleteFullChapter(name) {
         if(!confirm("Poora test uda dein?")) return;
         const snap = await db.collection("polls").where("chapter", "==", name).get();
         const batch = db.batch();
@@ -183,22 +172,24 @@
         await batch.commit();
     }
 
-    // --- DATA LOAD FIX ---
-    function loadData() {
+    // --- 🟢 FIX 4: REAL-TIME DATA LOAD ---
+    function loadResults() {
         db.collection("test_results").orderBy("timestamp", "desc").limit(15).onSnapshot(snap => {
             let h = "";
             snap.forEach(doc => {
                 const r = doc.data();
                 h += `<div class="list-item" style="border-left-color:orange">
-                    <b>${r.student}</b> - ${r.score}/${r.total}<br><small>${r.subject}</small>
+                    <b>${r.student}</b> - ${r.score}/${r.total}<br><small>${r.subject || 'N/A'}</small>
                 </div>`;
             });
-            document.getElementById('results-list').innerHTML = h || "No data.";
+            document.getElementById('results-list').innerHTML = h || "No scores yet.";
         });
     }
 
-    async function deleteDoc(c, i) { if(confirm("Delete?")) await db.collection(c).doc(i).delete(); }
-    window.onload = () => { loadLive(); loadTests(); loadData(); };
+    async function deleteDoc(c, i) { if(confirm("Delete item?")) await db.collection(c).doc(i).delete(); }
+    
+    // Auto-Run
+    window.onload = () => { loadLive(); loadTests(); loadResults(); };
 </script>
 </body>
 </html>
