@@ -7,26 +7,33 @@
     <script src="https://meet.jit.si/external_api.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; background: #0b0f19; color: white; display: flex; height: 100vh; overflow: hidden; }
+        :root { --bg: #0b0f19; --card: #161b22; --primary: #3db2ff; --text: #9ca3af; }
+        body { margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* SIDEBAR NAVIGATION */
         .sidebar { width: 85px; background: #0d1117; border-right: 1px solid #1f2937; display: flex; flex-direction: column; align-items: center; padding-top: 25px; gap: 25px; }
-        .nav-link { text-decoration: none; color: #9ca3af; font-size: 10px; text-align: center; display: flex; flex-direction: column; gap: 6px; cursor: pointer; transition: 0.3s; }
-        .nav-link.active { color: #3db2ff; }
+        .nav-link { text-decoration: none; color: var(--text); font-size: 10px; text-align: center; display: flex; flex-direction: column; gap: 6px; cursor: pointer; transition: 0.3s; }
+        .nav-link.active { color: var(--primary); }
         .icon-box { width: 42px; height: 42px; background: #161b22; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1px solid transparent; }
-        .active .icon-box { background: rgba(61, 178, 255, 0.1); border-color: #3db2ff; color: #3db2ff; }
+        .active .icon-box { background: rgba(61, 178, 255, 0.1); border-color: var(--primary); color: var(--primary); }
         
+        /* MAIN CONTENT AREA */
         .main { flex: 1; padding: 25px; overflow-y: auto; background: radial-gradient(circle at top right, #161b22, #0b0f19); }
-        .class-card { background: #161b22; padding: 20px; border-radius: 18px; margin-bottom: 15px; border-left: 5px solid #3db2ff; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .class-card { background: var(--card); padding: 20px; border-radius: 18px; margin-bottom: 15px; border-left: 5px solid var(--primary); box-shadow: 0 10px 20px rgba(0,0,0,0.2); transition: 0.3s; }
+        .class-card:hover { transform: scale(1.01); }
         .class-name { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 5px; }
-        .educator-name { font-size: 13px; color: #3db2ff; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        .class-meta { font-size: 12px; color: #9ca3af; display: flex; gap: 15px; align-items: center; }
+        .educator-name { font-size: 13px; color: var(--primary); margin-bottom: 12px; font-weight: 600; text-transform: uppercase; }
+        .class-meta { font-size: 12px; color: var(--text); display: flex; gap: 15px; align-items: center; }
         
-        .btn-join { margin-top: 15px; display: inline-block; background: #3db2ff; color: white; text-decoration: none; padding: 10px 22px; border-radius: 10px; font-size: 13px; font-weight: 800; border: none; cursor: pointer; transition: 0.2s; }
-        .btn-join:hover { background: #299ae6; transform: translateY(-2px); }
+        /* JOIN BUTTON */
+        .btn-join { margin-top: 15px; display: inline-block; background: var(--primary); color: white; text-decoration: none; padding: 10px 22px; border-radius: 10px; font-size: 13px; font-weight: 800; border: none; cursor: pointer; transition: 0.2s; width: 100%; text-align: center; }
+        .btn-join:hover { background: #299ae6; box-shadow: 0 5px 15px rgba(61, 178, 255, 0.4); }
 
-        /* Video Modal Fix */
+        /* VIDEO MODAL */
         #video-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: none; }
-        .close-btn { position: absolute; top: 20px; right: 20px; background: #ff4444; color: white; border: none; padding: 10px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; z-index: 10000; }
+        .close-btn { position: absolute; top: 20px; right: 20px; background: #ff4444; color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; z-index: 10000; box-shadow: 0 5px 15px rgba(255, 68, 68, 0.3); }
     </style>
 </head>
 <body>
@@ -52,13 +59,14 @@
     </div>
 
     <div class="main">
-        <h2 style="margin:0 0 20px 0; font-weight: 800; font-size: 24px;">Today's <span style="color:#3db2ff;">Schedule</span></h2>
+        <h2 style="margin:0 0 20px 0; font-weight: 800; font-size: 26px;">Today's <span style="color:var(--primary);">Schedule</span></h2>
         <div id="schedule-list">
-            <p style="text-align:center; color:#4b5563; margin-top:40px;">Checking your classes...</p>
+            <p style="text-align:center; color:#4b5563; margin-top:40px; font-weight: 600;">⌛ Syncing with Phoenix Servers...</p>
         </div>
     </div>
 
     <script>
+        // FIREBASE CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDaWIHRYCfT8",
             authDomain: "phnoenix-coaching.firebaseapp.com",
@@ -68,43 +76,60 @@
         if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
         const db = firebase.firestore();
 
-        // Get student's class from login
+        // Get user class from localStorage
         const studentClass = localStorage.getItem("userClass") || "10th";
 
-        // Listen for Scheduled Classes
+        // REAL-TIME LISTENER FOR CLASSES
         db.collection("live_classes")
           .where("targetClass", "==", studentClass)
-          .orderBy("timestamp", "desc")
           .onSnapshot((snapshot) => {
             const list = document.getElementById('schedule-list');
             list.innerHTML = "";
             
             if (snapshot.empty) { 
-                list.innerHTML = `<div style="text-align:center; padding:50px; color:#4b5563;">
-                    <div style="font-size:40px;">😴</div>
-                    <p>No classes scheduled for ${studentClass} today.</p>
+                list.innerHTML = `
+                <div style="text-align:center; padding:60px 20px; color:#4b5563;">
+                    <div style="font-size:50px; margin-bottom:10px;">📅</div>
+                    <p style="font-weight:700; color:#888;">No classes scheduled for ${studentClass} today.</p>
                 </div>`; 
                 return; 
             }
 
-            snapshot.forEach((doc) => {
-                let d = doc.data();
-                // Hum current_live se roomID check karenge agar class online hai
+            // Client-side Sort: Nayi classes upar dikhane ke liye
+            let classArray = [];
+            snapshot.forEach(doc => {
+                let data = doc.data();
+                data.id = doc.id;
+                classArray.push(data);
+            });
+
+            // Sorting logic (using timestamp or fallback)
+            classArray.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+
+            classArray.forEach((d) => {
+                let timeUI = d.time;
+                if(d.time && d.time.includes('T')) {
+                    timeUI = d.time.split('T')[1]; // Extracts 10:30 from 2023-10-10T10:30
+                }
+
                 list.innerHTML += `
                     <div class="class-card">
                         <div class="class-name">${d.topic}</div>
                         <div class="educator-name">👨‍🏫 Phoenix Faculty</div>
                         <div class="class-meta">
                             <span>📅 Today</span>
-                            <span>⏰ ${d.time}</span>
+                            <span>⏰ ${timeUI || 'Scheduled'}</span>
                         </div>
-                        <button onclick="startClass('${studentClass}')" class="btn-join">JOIN LIVE CLASS →</button>
+                        <button onclick="checkLiveAndJoin('${studentClass}')" class="btn-join">JOIN LIVE CLASS →</button>
                     </div>`;
             });
+        }, (error) => {
+            console.log("Error:", error);
+            document.getElementById('schedule-list').innerHTML = "Database Connection Error.";
         });
 
-        async function startClass(cls) {
-            // Check if class is actually LIVE right now
+        // JOIN LOGIC
+        async function checkLiveAndJoin(cls) {
             const liveDoc = await db.collection("current_live").doc(cls).get();
             
             if (liveDoc.exists && liveDoc.data().status === "online") {
@@ -118,25 +143,25 @@
                     parentNode: document.querySelector('#jitsi-container'),
                     userInfo: { displayName: localStorage.getItem("userName") || 'Student' },
                     configOverwrite: {
-                        disableDeepLinking: true,   // 👈 App Popup Hatane ka permanent ilaaj
-                        prejoinPageEnabled: false,  // 👈 Seedha class ke andar entry
-                        enableWelcomePage: false,   // 👈 Dial-in numbers gayab
+                        disableDeepLinking: true,   
+                        prejoinPageEnabled: false,  
+                        enableWelcomePage: false,   
                         startWithAudioMuted: true,
                         startWithVideoMuted: true
                     },
                     interfaceConfigOverwrite: {
-                        MOBILE_APP_PROMO: false,    // 👈 Mobile app ad band
+                        MOBILE_APP_PROMO: false,    
                         TOOLBAR_BUTTONS: ['chat', 'raisehand', 'hangup']
                     }
                 };
                 new JitsiMeetExternalAPI("meet.jit.si", options);
             } else {
-                alert("Teacher ne abhi class start nahi ki hai. Please wait karein!");
+                alert("🔴 Teacher abhi Live nahi aaye hain. Schedule time par check karein!");
             }
         }
 
         function closeClass() {
-            if(confirm("Class band karni hai?")) {
+            if(confirm("Exit the ongoing class?")) {
                 document.getElementById('video-overlay').style.display = 'none';
                 document.getElementById('jitsi-container').innerHTML = "";
             }
