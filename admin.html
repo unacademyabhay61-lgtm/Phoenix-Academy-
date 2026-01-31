@@ -84,7 +84,7 @@
     async function startInstantLive() {
         const cls = document.getElementById('liveClassTarget').value;
         const topic = document.getElementById('liveTopic').value;
-        if(!topic) return alert("Topic bhariye!");
+        if(!topic) return alert("Bhai, Topic bhariye!");
 
         const roomID = "PhoenixLive_" + cls + "_" + Math.floor(Math.random() * 10000);
         document.getElementById('live-container').style.display = "block";
@@ -97,14 +97,17 @@
             parentNode: document.querySelector('#live-container'),
             userInfo: { displayName: 'Instructor (Phoenix Academy)' },
             configOverwrite: {
-                disableDeepLinking: true, // 👈 MOBILE APP POPUP REMOVED
+                disableDeepLinking: true,       // 👈 App popup band
+                prejoinPageEnabled: false,      // 👈 Seedha entry
+                enableWelcomePage: false,       // 👈 PIN/Dial-in screen gayab
                 startWithAudioMuted: false,
                 startWithVideoMuted: false,
                 disableRemoteMute: false, 
-                prejoinPageEnabled: false,
                 remoteVideoMenu: { disabled: true } 
             },
             interfaceConfigOverwrite: {
+                MOBILE_APP_PROMO: false,        // 👈 App ad band
+                SHOW_CHROME_EXTENSION_BANNER: false,
                 TOOLBAR_BUTTONS: ['microphone', 'camera', 'desktop', 'chat', 'raisehand', 'hangup']
             }
         };
@@ -123,18 +126,13 @@
         const cls = document.getElementById('liveClassTarget').value;
         const topic = document.getElementById('liveTopic').value;
         const time = document.getElementById('liveTime').value;
-        if(!topic || !time) return alert("Fill Topic and Time!");
+        if(!topic || !time) return alert("Fill details!");
         await db.collection("live_classes").add({
-            targetClass: cls, 
-            topic: topic, 
-            time: time, 
-            status: "scheduled", 
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            targetClass: cls, topic: topic, time: time, status: "scheduled", timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
-        alert("Class Scheduled Successfully! Dashboard check karein.");
+        alert("Scheduled!");
     }
 
-    // Results & Bulk Upload functions remain same
     function loadAnalytics() {
         db.collection("test_results").orderBy("timestamp", "desc").limit(10).onSnapshot(snap => {
             const div = document.getElementById('analytics-list');
