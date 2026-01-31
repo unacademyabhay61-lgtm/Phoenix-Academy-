@@ -9,39 +9,46 @@
         :root { --bg: #0b0c0e; --card: #1c1f26; --primary: #3db2ff; --green: #2ecc71; --danger: #ff4444; }
         body { background: var(--bg); color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding-bottom: 90px; overflow-x: hidden; }
         
-        .header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a2d32; background: #0b0c0e; }
-        .logo-text { font-weight: 800; font-size: 20px; color: #fff; }
+        /* Header & Banner */
+        .header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a2d32; }
+        .logo-text { font-weight: 800; font-size: 20px; }
 
-        #upcoming-box { background: linear-gradient(135deg, #1e2128, #16181c); border: 1px solid #3db2ff44; border-radius: 18px; padding: 15px; margin: 10px 20px; display: none; }
-        
-        #live-banner { background: linear-gradient(90deg, #ff4444, #b30000); padding: 12px 20px; display: none; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 2px solid rgba(255,255,255,0.2); }
+        #live-banner { background: linear-gradient(90deg, #ff4444, #b30000); padding: 12px 20px; display: none; justify-content: space-between; align-items: center; cursor: pointer; }
         .live-dot { height: 8px; width: 8px; background: #fff; border-radius: 50%; display: inline-block; margin-right: 5px; animation: blink 1s infinite; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-        /* Full Screen Video Overlay */
+        /* Video Overlay & Stealth Player */
         #video-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: none; flex-direction: column; }
         .close-video { position: absolute; top: 15px; right: 15px; background: var(--danger); border: none; color: #fff; padding: 10px 20px; border-radius: 12px; z-index: 2100; font-weight: bold; cursor: pointer; }
 
-        #player-container { width: 100%; height: 60%; position: relative; background: #000; overflow: hidden; }
+        #player-container { 
+            width: 100%; height: 40vh; position: relative; overflow: hidden; background: #000; 
+            border-bottom: 2px solid #333;
+        }
         
-        /* Transparent Guards to block clicks on YouTube Logo/Links */
-        .guard-top { position: absolute; top: 0; left: 0; width: 100%; height: 60px; z-index: 2050; cursor: default; }
-        .guard-bottom { position: absolute; bottom: 0; right: 0; width: 100px; height: 50px; z-index: 2050; cursor: default; }
+        #youtube-embed-area iframe {
+            width: 100%; height: 100%;
+            transform: scale(1.4); /* Blocks YouTube Logo & UI */
+            transform-origin: center;
+            pointer-events: none; /* Prevents clicks on YouTube links */
+        }
 
+        .stealth-guard { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2050; }
+
+        #custom-chat-box { flex: 1; background: #0b0c0e; display: flex; flex-direction: column; }
+
+        /* UI Elements */
         .grid-menu { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 15px 20px; }
-        .icon-box { background: var(--card); height: 55px; width: 55px; border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-size: 22px; border: 1px solid #2a2d32; transition: 0.3s; cursor: pointer; }
+        .icon-box { background: var(--card); height: 55px; width: 55px; border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-size: 22px; border: 1px solid #2a2d32; }
         .menu-item { text-align: center; }
-        .menu-item span { font-size: 10px; color: #888; font-weight: 600; }
+        .menu-item span { font-size: 10px; color: #888; }
 
         .section-title { padding: 15px 20px 5px; font-size: 16px; font-weight: 800; color: var(--primary); }
-        .list-container { padding: 10px 20px; min-height: 50px; }
-        .item-card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 12px; border: 1px solid #2a2d32; display: flex; align-items: center; justify-content: space-between; }
+        .item-card { background: var(--card); border-radius: 15px; padding: 15px; margin: 10px 20px; border: 1px solid #2a2d32; display: flex; align-items: center; justify-content: space-between; }
         
-        .nav-bar { position: fixed; bottom: 0; width: 100%; background: #16181c; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #222; z-index: 1000; }
-        .nav-item { color: #555; text-decoration: none; font-size: 11px; text-align: center; font-weight: bold; }
+        .nav-bar { position: fixed; bottom: 0; width: 100%; background: #16181c; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #222; }
+        .nav-item { color: #555; text-decoration: none; font-size: 11px; text-align: center; }
         .nav-item.active { color: #fff; }
-
-        #custom-chat-box { flex: 1; background: #0b0c0e; border-top: 2px solid #333; padding: 15px; overflow-y: auto; }
     </style>
 </head>
 <body>
@@ -51,55 +58,38 @@
         <div style="font-size: 10px; background: #000; padding: 5px 12px; border-radius: 10px; font-weight: bold;">JOIN CLASS</div>
     </div>
 
-    <div id="upcoming-box">
-        <div style="color: var(--primary); font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">📅 Next Scheduled Class</div>
-        <div id="up-topic" style="font-size: 16px; font-weight: 700;">Topic Name</div>
-        <div id="up-time" style="font-size: 12px; color: #888; margin-top: 4px;">Time...</div>
-    </div>
-
     <div id="video-overlay">
         <button class="close-video" onclick="closeLiveClass()">CLOSE ✕</button>
-        
         <div id="player-container">
-            <div class="guard-top"></div>
-            <div class="guard-bottom"></div>
-            
-            <div id="youtube-embed-area" style="width: 100%; height: 100%;">
-                </div>
+            <div class="stealth-guard"></div> <div id="youtube-embed-area" style="width:100%; height:100%;"></div>
         </div>
-        
         <div id="custom-chat-box">
-            <div style="color:var(--primary); font-size:12px; font-weight:800; margin-bottom:10px;">🛡️ SECURE LIVE STREAM</div>
-            <div id="chat-content" style="color:#888; font-size:12px; font-style:italic;">
-                Classes are encrypted for Phoenix Academy students only.
+            <div style="padding:12px; background:#1c1f26; font-size:12px; font-weight:bold; color:var(--primary); border-bottom:1px solid #333;">💬 CLASS CHAT</div>
+            <div id="real-chat-area" style="flex:1;">
+                <p style="text-align:center; padding:40px; color:#444; font-size:12px;">Chat loading... (Available in Portrait/Auto-rotate)</p>
             </div>
         </div>
     </div>
 
     <div class="header">
         <div class="logo-text">Phoenix Academy</div>
-        <div style="font-size: 11px; color: var(--green); font-weight: 700; border: 1px solid var(--green); padding: 3px 8px; border-radius: 10px;">OFFLINE BATCH</div>
+        <div style="font-size: 10px; color: var(--green); font-weight: 700; border: 1px solid var(--green); padding: 3px 8px; border-radius: 10px;">PRO PORTAL</div>
     </div>
 
     <div class="grid-menu">
         <div class="menu-item" onclick="loadData('notes')"><div class="icon-box">📚</div><span>Notes</span></div>
         <div class="menu-item" onclick="loadData('polls')"><div class="icon-box">🏆</div><span>Tests</span></div>
         <div class="menu-item" onclick="loadData('playlist')"><div class="icon-box">🎬</div><span>Videos</span></div>
-        <div class="menu-item" onclick="alert('Practice sets coming soon!')"><div class="icon-box">⚡</div><span>Practice</span></div>
+        <div class="menu-item" onclick="alert('Coming soon!')"><div class="icon-box">⚡</div><span>Practice</span></div>
     </div>
 
-    <div class="section-title" id="display-title">Dashboard Overview</div>
-    <div id="display-list" class="list-container">
-        <p style="text-align:center; color:#444; font-size: 12px;">Select an option from above to view content.</p>
-    </div>
-
-    <div class="section-title">📊 My Performance</div>
-    <div id="my-records-list" class="list-container" style="padding: 0 15px;"></div>
+    <div class="section-title">Dashboard Overview</div>
+    <div id="display-list"><p style="text-align:center; color:#444; margin-top:20px;">Select content to view</p></div>
 
     <nav class="nav-bar">
         <a href="dashboard.html" class="nav-item active">🏠<br>Home</a>
-        <a href="planner.html" class="nav-item">📅<br>Planner</a>
-        <a href="profile.html" class="nav-item">👤<br>Me</a>
+        <a href="#" class="nav-item">📅<br>Planner</a>
+        <a href="#" class="nav-item">👤<br>Me</a>
     </nav>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -112,7 +102,7 @@
             projectId: "phnoenix-coaching",
             appId: "1:56032052098:web:43d562162215be0eb3459b"
         };
-        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+        firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         let currentRoomID = ""; 
@@ -124,38 +114,32 @@
                     document.getElementById('live-banner').style.display = 'flex';
                     document.getElementById('live-topic').innerText = doc.data().topic;
                     currentRoomID = doc.data().roomID;
-                    console.log("Current ID:", currentRoomID);
                 } else {
                     document.getElementById('live-banner').style.display = 'none';
                 }
             });
-            // (Scheduled class logic remain same...)
         }
 
-        // --- 🚀 NEW WORKING JOIN LOGIC ---
         function joinLiveClass() {
             if(!currentRoomID) return;
-            
-            // 1. Show the overlay
             document.getElementById('video-overlay').style.display = 'flex';
             
-            // 2. Clean up any link if Admin pasted whole URL
+            // Extract ID from any URL format
             let vidID = currentRoomID;
             if(vidID.includes("v=")) vidID = vidID.split("v=")[1].split("&")[0];
-            if(vidID.includes("be/")) vidID = vidID.split("be/")[1].split("?")[0];
-            if(vidID.includes("live/")) vidID = vidID.split("live/")[1].split("?")[0];
+            else if(vidID.includes("be/")) vidID = vidID.split("be/")[1].split("?")[0];
+            else if(vidID.includes("live/")) vidID = vidID.split("live/")[1].split("?")[0];
 
-            // 3. Load the Player
+            // Load Stealth Player
             document.getElementById('youtube-embed-area').innerHTML = `
-                <iframe 
-                    width="100%" 
-                    height="100%" 
-                    src="https://www.youtube.com/embed/${vidID}?autoplay=1&controls=1&modestbranding=1&rel=0&iv_load_policy=3" 
-                    frameborder="0" 
-                    allow="autoplay; encrypted-media; picture-in-picture" 
-                    allowfullscreen
-                    style="border: none;">
-                </iframe>
+                <iframe src="https://www.youtube-nocookie.com/embed/${vidID}?autoplay=1&controls=0&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1" 
+                frameborder="0" allow="autoplay; encrypted-media" style="width:100%; height:100%;"></iframe>
+            `;
+
+            // Load Stealth Chat
+            document.getElementById('real-chat-area').innerHTML = `
+                <iframe src="https://www.youtube.com/live_chat?v=${vidID}&embed_domain=${window.location.hostname}" 
+                width="100%" height="100%" frameborder="0"></iframe>
             `;
         }
 
@@ -164,10 +148,7 @@
             document.getElementById('youtube-embed-area').innerHTML = "";
         }
 
-        async function loadData(type) { /* (Same as before) */ }
-        function loadMyPerformance() { /* (Same as before) */ }
-
-        window.onload = () => { syncClasses(); loadMyPerformance(); };
+        window.onload = syncClasses;
     </script>
 </body>
 </html>
