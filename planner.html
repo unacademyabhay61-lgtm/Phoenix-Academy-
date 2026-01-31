@@ -4,24 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phoenix - Planner</title>
+    <script src="https://meet.jit.si/external_api.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
-        body { margin: 0; font-family: sans-serif; background: #0b0f19; color: white; display: flex; height: 100vh; }
+        body { margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; background: #0b0f19; color: white; display: flex; height: 100vh; overflow: hidden; }
         .sidebar { width: 85px; background: #0d1117; border-right: 1px solid #1f2937; display: flex; flex-direction: column; align-items: center; padding-top: 25px; gap: 25px; }
-        .nav-link { text-decoration: none; color: #9ca3af; font-size: 10px; text-align: center; display: flex; flex-direction: column; gap: 6px; cursor: pointer; }
+        .nav-link { text-decoration: none; color: #9ca3af; font-size: 10px; text-align: center; display: flex; flex-direction: column; gap: 6px; cursor: pointer; transition: 0.3s; }
         .nav-link.active { color: #3db2ff; }
         .icon-box { width: 42px; height: 42px; background: #161b22; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1px solid transparent; }
         .active .icon-box { background: rgba(61, 178, 255, 0.1); border-color: #3db2ff; color: #3db2ff; }
-        .main { flex: 1; padding: 20px; overflow-y: auto; }
-        .class-card { background: #161b22; padding: 18px; border-radius: 15px; margin-bottom: 12px; border-left: 4px solid #3db2ff; }
-        .class-name { font-size: 17px; font-weight: bold; color: #f3f4f6; margin-bottom: 4px; }
-        .educator-name { font-size: 13px; color: #3db2ff; margin-bottom: 8px; font-weight: 500; }
-        .class-meta { font-size: 12px; color: #9ca3af; display: flex; gap: 10px; }
-        .btn-join { margin-top: 12px; display: inline-block; background: #3db2ff; color: white; text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: bold; }
+        
+        .main { flex: 1; padding: 25px; overflow-y: auto; background: radial-gradient(circle at top right, #161b22, #0b0f19); }
+        .class-card { background: #161b22; padding: 20px; border-radius: 18px; margin-bottom: 15px; border-left: 5px solid #3db2ff; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .class-name { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 5px; }
+        .educator-name { font-size: 13px; color: #3db2ff; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .class-meta { font-size: 12px; color: #9ca3af; display: flex; gap: 15px; align-items: center; }
+        
+        .btn-join { margin-top: 15px; display: inline-block; background: #3db2ff; color: white; text-decoration: none; padding: 10px 22px; border-radius: 10px; font-size: 13px; font-weight: 800; border: none; cursor: pointer; transition: 0.2s; }
+        .btn-join:hover { background: #299ae6; transform: translateY(-2px); }
+
+        /* Video Modal Fix */
+        #video-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: none; }
+        .close-btn { position: absolute; top: 20px; right: 20px; background: #ff4444; color: white; border: none; padding: 10px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; z-index: 10000; }
     </style>
 </head>
 <body>
+
+    <div id="video-overlay">
+        <button class="close-btn" onclick="closeClass()">EXIT CLASS ✕</button>
+        <div id="jitsi-container" style="height: 100%;"></div>
+    </div>
 
     <div class="sidebar">
         <a href="dashboard.html" class="nav-link">
@@ -39,8 +52,10 @@
     </div>
 
     <div class="main">
-        <h2 style="margin:0;">Today's Schedule</h2>
-        <div id="schedule-list"><p style="text-align:center; color:#4b5563; margin-top:40px;">Syncing Classes...</p></div>
+        <h2 style="margin:0 0 20px 0; font-weight: 800; font-size: 24px;">Today's <span style="color:#3db2ff;">Schedule</span></h2>
+        <div id="schedule-list">
+            <p style="text-align:center; color:#4b5563; margin-top:40px;">Checking your classes...</p>
+        </div>
     </div>
 
     <script>
@@ -53,29 +68,79 @@
         if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
         const db = firebase.firestore();
 
-        db.collection("classes").onSnapshot((snapshot) => {
+        // Get student's class from login
+        const studentClass = localStorage.getItem("userClass") || "10th";
+
+        // Listen for Scheduled Classes
+        db.collection("live_classes")
+          .where("targetClass", "==", studentClass)
+          .orderBy("timestamp", "desc")
+          .onSnapshot((snapshot) => {
             const list = document.getElementById('schedule-list');
             list.innerHTML = "";
-            if (snapshot.empty) { list.innerHTML = "<p style='text-align:center; color:gray;'>No classes today.</p>"; return; }
+            
+            if (snapshot.empty) { 
+                list.innerHTML = `<div style="text-align:center; padding:50px; color:#4b5563;">
+                    <div style="font-size:40px;">😴</div>
+                    <p>No classes scheduled for ${studentClass} today.</p>
+                </div>`; 
+                return; 
+            }
 
             snapshot.forEach((doc) => {
                 let d = doc.data();
-                // Har field check kar raha hoon taaki teacher ka original title hi aaye
-                let title = d.classTitle || d.title || d.className || d.topic || "Class Scheduled";
-                let teacher = d.educatorName || d.teacher || "Phoenix Faculty";
-
+                // Hum current_live se roomID check karenge agar class online hai
                 list.innerHTML += `
                     <div class="class-card">
-                        <div class="class-name">${title}</div>
-                        <div class="educator-name">👨‍🏫 ${teacher}</div>
+                        <div class="class-name">${d.topic}</div>
+                        <div class="educator-name">👨‍🏫 Phoenix Faculty</div>
                         <div class="class-meta">
-                            <span>📅 ${d.classDate || ''}</span>
-                            <span>⏰ ${d.classTime || ''}</span>
+                            <span>📅 Today</span>
+                            <span>⏰ ${d.time}</span>
                         </div>
-                        <a href="${d.classLink || '#'}" target="_blank" class="btn-join">JOIN CLASS →</a>
+                        <button onclick="startClass('${studentClass}')" class="btn-join">JOIN LIVE CLASS →</button>
                     </div>`;
             });
         });
+
+        async function startClass(cls) {
+            // Check if class is actually LIVE right now
+            const liveDoc = await db.collection("current_live").doc(cls).get();
+            
+            if (liveDoc.exists && liveDoc.data().status === "online") {
+                const roomID = liveDoc.data().roomID;
+                document.getElementById('video-overlay').style.display = 'block';
+
+                const options = {
+                    roomName: roomID,
+                    width: '100%',
+                    height: '100%',
+                    parentNode: document.querySelector('#jitsi-container'),
+                    userInfo: { displayName: localStorage.getItem("userName") || 'Student' },
+                    configOverwrite: {
+                        disableDeepLinking: true,   // 👈 App Popup Hatane ka permanent ilaaj
+                        prejoinPageEnabled: false,  // 👈 Seedha class ke andar entry
+                        enableWelcomePage: false,   // 👈 Dial-in numbers gayab
+                        startWithAudioMuted: true,
+                        startWithVideoMuted: true
+                    },
+                    interfaceConfigOverwrite: {
+                        MOBILE_APP_PROMO: false,    // 👈 Mobile app ad band
+                        TOOLBAR_BUTTONS: ['chat', 'raisehand', 'hangup']
+                    }
+                };
+                new JitsiMeetExternalAPI("meet.jit.si", options);
+            } else {
+                alert("Teacher ne abhi class start nahi ki hai. Please wait karein!");
+            }
+        }
+
+        function closeClass() {
+            if(confirm("Class band karni hai?")) {
+                document.getElementById('video-overlay').style.display = 'none';
+                document.getElementById('jitsi-container').innerHTML = "";
+            }
+        }
     </script>
 </body>
 </html>
