@@ -14,10 +14,8 @@
         .tab { flex: 1; padding: 10px; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 600; color: #777; transition: 0.3s; }
         .tab.active { background: var(--primary); color: white; }
         input, select { width: 100%; padding: 15px; margin-bottom: 12px; background: var(--input); border: 1px solid #333; color: white; border-radius: 15px; box-sizing: border-box; outline: none; font-size: 14px; }
-        input:focus, select:focus { border-color: var(--primary); }
-        .main-btn { width: 100%; padding: 16px; background: var(--primary); border: none; color: white; font-weight: 700; border-radius: 15px; cursor: pointer; font-size: 16px; margin-top: 10px; transition: 0.3s; }
-        .main-btn:active { transform: scale(0.98); }
-        #status-bar { margin-top: 20px; padding: 10px; background: rgba(0,0,0,0.5); border-radius: 10px; font-family: monospace; font-size: 11px; border: 1px solid #222; text-align: left; overflow: hidden; }
+        .main-btn { width: 100%; padding: 16px; background: var(--primary); border: none; color: white; font-weight: 700; border-radius: 15px; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        #status-bar { margin-top: 20px; padding: 10px; background: rgba(0,0,0,0.5); border-radius: 10px; font-family: monospace; font-size: 11px; border: 1px solid #222; text-align: left; }
         .online { color: #00ff00; } .error { color: #ff4444; }
     </style>
 </head>
@@ -63,11 +61,14 @@
             appId: "1:56032052098:web:43d562162215be0eb3459b"
         };
 
-        // Initialize Firebase
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
             state.innerHTML = "<span class='online'>READY ✅</span>";
         }
+
+        // 🟢 FIXED: Persistence for multi-device access
+        firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+            .catch(() => firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION));
 
         function setMode(newMode) {
             mode = newMode;
@@ -83,52 +84,47 @@
             const uClass = document.getElementById('userClass').value;
             const db = firebase.firestore();
 
-            if (!email || !pass) return alert("Email and Password required!");
+            if (!email || !pass) return alert("Details bharo!");
 
             if (mode === 'signup') {
-                if (!uClass) { alert("Please select a class!"); return; }
-                state.innerText = "Generating Bio-Data...";
-                
+                if (!uClass) return alert("Select Class!");
+                state.innerText = "Creating Profile...";
                 try {
                     const cred = await firebase.auth().createUserWithEmailAndPassword(email, pass);
-                    // Database mein user ki class fix karna
                     await db.collection("users").doc(cred.user.uid).set({
-                        email: email,
-                        studentClass: uClass,
-                        joinedOn: firebase.firestore.FieldValue.serverTimestamp()
+                        email: email, studentClass: uClass, joinedOn: firebase.firestore.FieldValue.serverTimestamp()
                     });
-                    alert("Signup Successful! Now Sign In to enter.");
+                    alert("Account Created! Sign in now.");
                     setMode('login');
-                } catch (err) {
-                    state.innerHTML = `<span class='error'>${err.message}</span>`;
-                }
+                } catch (err) { state.innerHTML = `<span class='error'>${err.message}</span>`; }
             } else {
-                state.innerText = "Scanning Identity...";
+                state.innerText = "Authenticating...";
                 try {
                     const cred = await firebase.auth().signInWithEmailAndPassword(email, pass);
-                    
-                    // 🟢 FIX: Login hote hi Firestore se is bache ki class fetch karna
                     const doc = await db.collection("users").doc(cred.user.uid).get();
                     
                     if (doc.exists) {
                         const userData = doc.data();
-                        // Local storage ko fresh class se update karna
-                        localStorage.setItem("userClass", userData.studentClass);
-                        localStorage.setItem("userEmail", email);
+                        
+                        // 🟢 FIXED: Safe storage to bypass browser security blocks
+                        try {
+                            localStorage.setItem("userClass", userData.studentClass);
+                            localStorage.setItem("userEmail", email);
+                        } catch(e) {
+                            sessionStorage.setItem("userClass", userData.studentClass);
+                        }
                         
                         state.innerHTML = "<span class='online'>ACCESS GRANTED ✅</span>";
                         
-                        // Admin vs Student Route
                         setTimeout(() => {
-                            if (email === "unacademyabhay61@gmail.com") {
+                            if (email.toLowerCase() === "unacademyabhay61@gmail.com") {
                                 window.location.href = "admin.html";
                             } else {
                                 window.location.href = "dashboard.html";
                             }
                         }, 800);
                     } else {
-                        // Agar user auth mein hai par firestore mein data nahi (Rare case)
-                        state.innerHTML = "<span class='error'>Profile missing! Try Signup again.</span>";
+                        state.innerHTML = "<span class='error'>User data not found!</span>";
                     }
                 } catch (err) {
                     state.innerHTML = `<span class='error'>${err.message}</span>`;
