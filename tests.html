@@ -6,6 +6,7 @@
     <title>Phoenix Academy - Online Test</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <style>
         :root { --primary: #3db2ff; --bg: #0b0f19; --card: #161b22; --danger: #ff4444; }
         body { margin: 0; font-family: sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; overflow: hidden; }
@@ -24,7 +25,6 @@
         .btn-submit { background: var(--danger); width: 100%; margin-top: 15px; }
         .hidden { display: none; }
         .sol-card { text-align: left; margin-top: 15px; background: #000; padding: 12px; border-radius: 12px; border-left: 4px solid #333; }
-        .class-badge { font-size: 10px; background: #333; padding: 4px 8px; border-radius: 5px; margin-bottom: 10px; display: inline-block; }
     </style>
 </head>
 <body>
@@ -65,20 +65,38 @@
         };
         if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
         const db = firebase.firestore();
+        const auth = firebase.auth();
 
         let questions = [];
         let currentIdx = 0;
         let userAnswers = [];
         let currentChapter = "";
+        let currentClass = "";
+        let studentName = "";
 
+        // SMART RECOGNITION SYSTEM
         window.onload = () => {
-            let identifier = localStorage.getItem("userIdentifier");
-            if (!identifier) {
-                identifier = prompt("Enter your Name/Email:");
-                if (!identifier) identifier = "Guest_" + Math.floor(Math.random() * 1000);
-                localStorage.setItem("userIdentifier", identifier);
-            }
-            showClassSelection();
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    const profileDoc = await db.collection("student_profiles").doc(user.email).get();
+                    if (profileDoc.exists) {
+                        studentName = profileDoc.data().name;
+                    } else {
+                        studentName = prompt("Hume aapka naam nahi pata. Kripya apna Full Name likhein:");
+                        if (!studentName) studentName = user.displayName || "Unknown Student";
+                        
+                        await db.collection("student_profiles").doc(user.email).set({
+                            name: studentName,
+                            email: user.email,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                    showClassSelection();
+                } else {
+                    alert("Please Login first!");
+                    // Yahan aap apna login page redirect kar sakte hain
+                }
+            });
         };
 
         function showClassSelection() {
@@ -95,15 +113,16 @@
         }
 
         async function loadChaptersByClass(cls) {
+            currentClass = cls;
             const list = document.getElementById('options-list');
             list.innerHTML = "⏳ Loading " + cls + " Tests...";
             const snapshot = await db.collection("polls").where("targetClass", "==", cls).get();
             const chapters = [...new Set(snapshot.docs.map(doc => doc.data().chapter))];
             
-            list.innerHTML = `<button onclick="showClassSelection()" style="background:none; border:none; color:var(--primary); cursor:pointer; margin-bottom:10px;">← Back to Classes</button>`;
+            list.innerHTML = `<button onclick="showClassSelection()" style="background:none; border:none; color:var(--primary); cursor:pointer; margin-bottom:10px;">← Back</button>`;
             
             if(chapters.length === 0) {
-                list.innerHTML += "<p>No tests found for this class.</p>";
+                list.innerHTML += "<p>No tests found.</p>";
                 return;
             }
 
@@ -146,7 +165,7 @@
             });
 
             document.getElementById('back-btn').style.visibility = currentIdx === 0 ? "hidden" : "visible";
-            document.getElementById('next-btn').innerText = currentIdx === questions.length - 1 ? "Review & Finish" : "Next →";
+            document.getElementById('next-btn').innerText = currentIdx === questions.length - 1 ? "Submit Test" : "Next →";
         }
 
         function nextQuestion() {
@@ -166,7 +185,7 @@
         }
 
         function confirmSubmit() {
-            if(confirm("Are you sure you want to submit the test?")) showResult();
+            if(confirm("Submit the test?")) showResult();
         }
 
         async function showResult() {
@@ -177,11 +196,14 @@
             document.getElementById('result-area').classList.remove('hidden');
             document.getElementById('score-text').innerText = `Score: ${score} / ${questions.length}`;
             
+            // AB RESULT MEIN ASLI NAAM JAYEGA
             await db.collection("test_results").add({
-                student: localStorage.getItem("userIdentifier"),
+                student: studentName,
+                email: auth.currentUser.email,
                 score: score,
                 total: questions.length,
                 subject: currentChapter,
+                targetClass: currentClass,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
@@ -193,9 +215,9 @@
             questions.forEach((q, i) => {
                 const ans = userAnswers[i];
                 const isCorrect = ans && ans.picked === q.answer;
-                html += `<div class="sol-card" style="border-left-color:${isCorrect ? 'green' : (ans ? 'red' : '#555')}">
+                html += `<div class="sol-card" style="border-left: 4px solid ${isCorrect ? 'green' : (ans ? 'red' : '#555')}">
                     <b>Q${i+1}.</b> ${q.question}<br>
-                    <small style="color:${isCorrect ? 'green' : 'red'}">Your Answer: ${ans ? ans.picked : 'Skipped'}</small><br>
+                    <small style="color:${isCorrect ? 'green' : 'red'}">Picked: ${ans ? ans.picked : 'Skipped'}</small> | 
                     <small style="color:green">Correct: ${q.answer}</small>
                 </div>`;
             });
