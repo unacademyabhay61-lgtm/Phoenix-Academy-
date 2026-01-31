@@ -62,7 +62,7 @@
 
     <div class="grid-menu">
         <div class="menu-item" onclick="loadData('notes')"><div class="icon-box">📚</div><span>Notes</span></div>
-        <div class="menu-item" onclick="loadData('tests')"><div class="icon-box">📝</div><span>Tests</span></div>
+        <div class="menu-item" onclick="loadData('tests')"><div class="icon-box)📝</div><span>Tests</span></div>
         <div class="menu-item" onclick="loadData('playlist')"><div class="icon-box">🎬</div><span>Videos</span></div>
         <div class="menu-item" onclick="alert('Practice sets coming soon!')"><div class="icon-box">⚡</div><span>Practice</span></div>
     </div>
@@ -97,9 +97,8 @@
         let currentRoomID = "";
         const studentClass = localStorage.getItem("userClass") || "10th";
 
-        // 🟢 SYNC BOTH LIVE AND SCHEDULED
         function syncClasses() {
-            // Check Live
+            // LIVE CLASS SYNC
             db.collection("current_live").doc(studentClass).onSnapshot((doc) => {
                 if (doc.exists && doc.data().status === "online") {
                     document.getElementById('live-banner').style.display = 'flex';
@@ -110,18 +109,19 @@
                 }
             });
 
-            // Check Scheduled (8:30 Class Fix)
+            // SCHEDULED CLASS SYNC (Fix for visibility)
             db.collection("live_classes")
               .where("targetClass", "==", studentClass)
-              .where("status", "==", "scheduled")
-              .orderBy("time", "asc").limit(1)
+              .orderBy("timestamp", "desc").limit(1)
               .onSnapshot(snap => {
                   if(!snap.empty) {
                       const data = snap.docs[0].data();
                       document.getElementById('upcoming-box').style.display = 'block';
                       document.getElementById('up-topic').innerText = data.topic;
-                      const d = new Date(data.time);
-                      document.getElementById('up-time').innerText = "⏰ " + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                      
+                      // Handles both date object and string time
+                      const timeDisplay = data.time.includes('T') ? data.time.replace('T', ' ') : data.time;
+                      document.getElementById('up-time').innerText = "⏰ " + timeDisplay;
                   } else {
                       document.getElementById('upcoming-box').style.display = 'none';
                   }
@@ -137,19 +137,26 @@
                 parentNode: document.querySelector('#jitsi-container'),
                 userInfo: { displayName: localStorage.getItem("userName") || 'Student' },
                 configOverwrite: {
-                    disableDeepLinking: true, // 👈 MOBILE APP POPUP FIX
+                    disableDeepLinking: true,       // 👈 FIXED: No App Popup
+                    prejoinPageEnabled: false,      // 👈 FIXED: Direct Entry
+                    enableWelcomePage: false,       // 👈 FIXED: No PIN/Dial-in
                     startWithAudioMuted: true,
                     startWithVideoMuted: true,
                     remoteVideoMenu: { disabled: true }
                 },
-                interfaceConfigOverwrite: { TOOLBAR_BUTTONS: ['chat', 'raisehand', 'hangup'] }
+                interfaceConfigOverwrite: { 
+                    MOBILE_APP_PROMO: false,        // 👈 FIXED: No Ads
+                    TOOLBAR_BUTTONS: ['chat', 'raisehand', 'hangup'] 
+                }
             };
             new JitsiMeetExternalAPI("meet.jit.si", options);
         }
 
         function closeLiveClass() {
-            document.getElementById('video-overlay').style.display = 'none';
-            document.getElementById('jitsi-container').innerHTML = "";
+            if(confirm("Exit class?")) {
+                document.getElementById('video-overlay').style.display = 'none';
+                document.getElementById('jitsi-container').innerHTML = "";
+            }
         }
 
         function loadMyPerformance() {
