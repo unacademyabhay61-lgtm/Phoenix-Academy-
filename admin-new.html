@@ -1,1 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Phoenix Admin Panel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <style>
+        body { background: #0b0c0e; color: white; font-family: sans-serif; padding: 15px; margin: 0; }
+        .box { background: #16181c; padding: 20px; border-radius: 15px; border: 1px solid #333; margin-bottom: 20px; }
+        select, input, textarea { width: 100%; padding: 12px; margin: 10px 0; background: #000; color: white; border: 1px solid #444; border-radius: 10px; box-sizing: border-box; }
+        .btn { background: #3db2ff; color: white; padding: 14px; border: none; width: 100%; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        details { background: #000; padding: 12px; border-radius: 10px; margin-top: 10px; border-left: 5px solid orange; }
+        summary { cursor: pointer; font-weight: bold; padding: 5px; display: flex; justify-content: space-between; }
+        .q-item { font-size: 11px; padding: 8px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h3>🚀 Folder System Upload</h3>
+        <select id="cls">
+            <option>9th</option><option>10th</option><option>11th</option><option>12th</option><option>NEET UG</option>
+        </select>
+        <input type="text" id="ch" placeholder="Chapter Name">
+        <textarea id="js" placeholder="Paste JSON here..." rows="4"></textarea>
+        <button class="btn" onclick="save()">SAVE TEST TO FOLDER</button>
+    </div>
+
+    <div id="folders"></div>
+
+    <script>
+        firebase.initializeApp({ apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDAwIHRYCfT8", authDomain: "phnoenix-coaching.firebaseapp.com", projectId: "phnoenix-coaching" });
+        const db = firebase.firestore();
+
+        async function save() {
+            const raw = document.getElementById('js').value;
+            const chap = document.getElementById('ch').value;
+            const cls = document.getElementById('cls').value;
+            if(!chap || !raw) return alert("Details bharo bhai!");
+            try {
+                const qs = JSON.parse(raw);
+                const batch = db.batch();
+                qs.forEach(q => batch.set(db.collection("polls").doc(), { ...q, chapter: chap, targetClass: cls }));
+                await batch.commit();
+                alert("Success! Folder Created.");
+                document.getElementById('js').value = "";
+            } catch(e) { alert("JSON Format Check Karein!"); }
+        }
+
+        db.collection("polls").onSnapshot(snap => {
+            let groups = {};
+            snap.forEach(doc => {
+                let d = doc.data();
+                let key = `${d.targetClass || '9th'} | ${d.chapter}`;
+                if(!groups[key]) groups[key] = [];
+                groups[key].push({id: doc.id, q: d.question});
+            });
+            let h = "";
+            for(let k in groups) {
+                h += `<details><summary>📁 ${k} (${groups[k].length} Qs)</summary>
+                <div style="margin-top:10px;">${groups[k].map(i => `<div class="q-item"><span>${i.q.substring(0,30)}...</span> <span onclick="db.collection('polls').doc('${i.id}').delete()" style="color:red;cursor:pointer">✖</span></div>`).join('')}</div>
+                </details>`;
+            }
+            document.getElementById('folders').innerHTML = h;
+        });
+    </script>
+</body>
+</html>
 
