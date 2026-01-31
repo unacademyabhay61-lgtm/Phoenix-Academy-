@@ -15,8 +15,9 @@
         .tab.active { background: var(--primary); color: white; }
         input, select { width: 100%; padding: 15px; margin-bottom: 12px; background: var(--input); border: 1px solid #333; color: white; border-radius: 15px; box-sizing: border-box; outline: none; font-size: 14px; }
         input:focus, select:focus { border-color: var(--primary); }
-        .main-btn { width: 100%; padding: 16px; background: var(--primary); border: none; color: white; font-weight: 700; border-radius: 15px; cursor: pointer; font-size: 16px; margin-top: 10px; }
-        #status-bar { margin-top: 20px; padding: 10px; background: rgba(0,0,0,0.5); border-radius: 10px; font-family: monospace; font-size: 11px; border: 1px solid #222; text-align: left; }
+        .main-btn { width: 100%; padding: 16px; background: var(--primary); border: none; color: white; font-weight: 700; border-radius: 15px; cursor: pointer; font-size: 16px; margin-top: 10px; transition: 0.3s; }
+        .main-btn:active { transform: scale(0.98); }
+        #status-bar { margin-top: 20px; padding: 10px; background: rgba(0,0,0,0.5); border-radius: 10px; font-family: monospace; font-size: 11px; border: 1px solid #222; text-align: left; overflow: hidden; }
         .online { color: #00ff00; } .error { color: #ff4444; }
     </style>
 </head>
@@ -36,9 +37,11 @@
         
         <select id="userClass" style="display: none;">
             <option value="">Select Your Class</option>
+            <option value="9th">Class 9th</option>
             <option value="10th">Class 10th</option>
+            <option value="11th">Class 11th</option>
             <option value="12th">Class 12th</option>
-            <option value="NEET">NEET UG</option>
+            <option value="NEET UG">NEET UG</option>
         </select>
         
         <button id="actionBtn" class="main-btn" onclick="handleAuth()">SIGN IN NOW</button>
@@ -60,15 +63,11 @@
             appId: "1:56032052098:web:43d562162215be0eb3459b"
         };
 
-        // Firebase Initialization Check
-        window.onload = () => {
-            if (typeof firebase !== 'undefined') {
-                firebase.initializeApp(firebaseConfig);
-                state.innerHTML = "<span class='online'>READY ✅</span>";
-            } else {
-                state.innerHTML = "<span class='error'>Connection Failed! Refresh Page. ❌</span>";
-            }
-        };
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+            state.innerHTML = "<span class='online'>READY ✅</span>";
+        }
 
         function setMode(newMode) {
             mode = newMode;
@@ -78,41 +77,62 @@
             document.getElementById('userClass').style.display = mode === 'signup' ? 'block' : 'none';
         }
 
-        function handleAuth() {
-            if (typeof firebase === 'undefined') { alert("Scripts not loaded!"); return; }
-            
+        async function handleAuth() {
             const email = document.getElementById('email').value.trim();
             const pass = document.getElementById('pass').value.trim();
             const uClass = document.getElementById('userClass').value;
             const db = firebase.firestore();
 
+            if (!email || !pass) return alert("Email and Password required!");
+
             if (mode === 'signup') {
                 if (!uClass) { alert("Please select a class!"); return; }
-                state.innerText = "Creating Account...";
-                firebase.auth().createUserWithEmailAndPassword(email, pass)
-                    .then((cred) => {
-                        // Save student class to Firestore
-                        return db.collection("users").doc(cred.user.uid).set({
-                            email: email,
-                            studentClass: uClass
-                        });
-                    })
-                    .then(() => {
-                        alert("Signup Successful! Now Login.");
-                        setMode('login');
-                    })
-                    .catch(err => state.innerHTML = `<span class='error'>${err.message}</span>`);
+                state.innerText = "Generating Bio-Data...";
+                
+                try {
+                    const cred = await firebase.auth().createUserWithEmailAndPassword(email, pass);
+                    // Database mein user ki class fix karna
+                    await db.collection("users").doc(cred.user.uid).set({
+                        email: email,
+                        studentClass: uClass,
+                        joinedOn: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    alert("Signup Successful! Now Sign In to enter.");
+                    setMode('login');
+                } catch (err) {
+                    state.innerHTML = `<span class='error'>${err.message}</span>`;
+                }
             } else {
-                state.innerText = "Authenticating...";
-                firebase.auth().signInWithEmailAndPassword(email, pass)
-                    .then(() => {
-                        if (email === "unacademyabhay61@gmail.com") {
-                            window.location.href = "admin.html";
-                        } else {
-                            window.location.href = "dashboard.html";
-                        }
-                    })
-                    .catch(err => state.innerHTML = `<span class='error'>${err.message}</span>`);
+                state.innerText = "Scanning Identity...";
+                try {
+                    const cred = await firebase.auth().signInWithEmailAndPassword(email, pass);
+                    
+                    // 🟢 FIX: Login hote hi Firestore se is bache ki class fetch karna
+                    const doc = await db.collection("users").doc(cred.user.uid).get();
+                    
+                    if (doc.exists) {
+                        const userData = doc.data();
+                        // Local storage ko fresh class se update karna
+                        localStorage.setItem("userClass", userData.studentClass);
+                        localStorage.setItem("userEmail", email);
+                        
+                        state.innerHTML = "<span class='online'>ACCESS GRANTED ✅</span>";
+                        
+                        // Admin vs Student Route
+                        setTimeout(() => {
+                            if (email === "unacademyabhay61@gmail.com") {
+                                window.location.href = "admin.html";
+                            } else {
+                                window.location.href = "dashboard.html";
+                            }
+                        }, 800);
+                    } else {
+                        // Agar user auth mein hai par firestore mein data nahi (Rare case)
+                        state.innerHTML = "<span class='error'>Profile missing! Try Signup again.</span>";
+                    }
+                } catch (err) {
+                    state.innerHTML = `<span class='error'>${err.message}</span>`;
+                }
             }
         }
     </script>
