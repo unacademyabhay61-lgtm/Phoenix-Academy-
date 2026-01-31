@@ -8,42 +8,46 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #0b0c0e; --card: #1c1f26; --primary: #3db2ff; --green: #2ecc71; --danger: #ff4444; }
-        body { background: var(--bg); color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding-bottom: 90px; }
+        body { background: var(--bg); color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding-bottom: 90px; overflow-x: hidden; }
         
-        .header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a2d32; }
-        .logo-text { font-weight: 800; font-size: 20px; }
+        .header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a2d32; background: #0b0c0e; }
+        .logo-text { font-weight: 800; font-size: 20px; color: #fff; }
 
-        /* Scheduled Class Card */
-        .upcoming-card { background: linear-gradient(135deg, #1e2128, #16181c); border: 1px solid #3db2ff44; border-radius: 18px; padding: 15px; margin: 10px 20px; display: none; }
-        .live-banner { background: var(--danger); padding: 10px 20px; display: none; justify-content: space-between; align-items: center; cursor: pointer; }
+        /* SCHEDULED CLASS CARD */
+        #upcoming-box { background: linear-gradient(135deg, #1e2128, #16181c); border: 1px solid #3db2ff44; border-radius: 18px; padding: 15px; margin: 10px 20px; display: none; }
+        
+        /* LIVE BANNER UI */
+        #live-banner { background: linear-gradient(90deg, #ff4444, #b30000); padding: 12px 20px; display: none; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 2px solid rgba(255,255,255,0.2); }
+        .live-dot { height: 8px; width: 8px; background: #fff; border-radius: 50%; display: inline-block; margin-right: 5px; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
 
         #video-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: none; }
-        .close-video { position: absolute; top: 15px; right: 15px; background: var(--danger); border: none; color: #fff; padding: 10px; border-radius: 10px; z-index: 2001; }
+        .close-video { position: absolute; top: 15px; right: 15px; background: var(--danger); border: none; color: #fff; padding: 10px 20px; border-radius: 12px; z-index: 2001; font-weight: bold; }
 
-        .grid-menu { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px 20px; }
-        .icon-box { background: var(--card); height: 55px; width: 55px; border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 5px; font-size: 22px; border: 1px solid #2a2d32; }
-        .menu-item span { font-size: 10px; color: #888; display: block; text-align: center; }
+        .grid-menu { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 15px 20px; }
+        .icon-box { background: var(--card); height: 55px; width: 55px; border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-size: 22px; border: 1px solid #2a2d32; }
+        .menu-item span { font-size: 10px; color: #888; font-weight: 600; }
 
         .section-title { padding: 15px 20px 5px; font-size: 16px; font-weight: 800; color: var(--primary); }
-        .list-container { padding: 10px 20px; }
-        .item-card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 12px; border: 1px solid #2a2d32; display: flex; justify-content: space-between; align-items: center; }
-
-        .nav-bar { position: fixed; bottom: 0; width: 100%; background: #16181c; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #222; }
-        .nav-item { color: #555; text-decoration: none; font-size: 11px; text-align: center; }
+        .list-container { padding: 10px 20px; min-height: 50px; }
+        .item-card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 12px; border: 1px solid #2a2d32; display: flex; align-items: center; justify-content: space-between; }
+        
+        .nav-bar { position: fixed; bottom: 0; width: 100%; background: #16181c; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #222; z-index: 1000; }
+        .nav-item { color: #555; text-decoration: none; font-size: 11px; text-align: center; font-weight: bold; }
         .nav-item.active { color: #fff; }
     </style>
 </head>
 <body>
 
-    <div id="live-banner" class="live-banner" onclick="joinLiveClass()">
-        <div style="font-weight: 800;">🔴 LIVE NOW: <span id="live-topic">Topic...</span></div>
-        <div style="font-size: 10px; background: #000; padding: 5px 10px; border-radius: 8px;">JOIN NOW</div>
+    <div id="live-banner" onclick="joinLiveClass()">
+        <div><span class="live-dot"></span> <span style="font-weight: 800; font-size: 13px;">LIVE NOW: <span id="live-topic">Topic...</span></span></div>
+        <div style="font-size: 10px; background: #000; padding: 5px 12px; border-radius: 10px; font-weight: bold;">JOIN CLASS</div>
     </div>
 
-    <div id="upcoming-section" class="upcoming-card">
-        <div style="color: var(--primary); font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">Next Class Schedule</div>
-        <div id="upcoming-topic" style="font-size: 16px; font-weight: 700;">No classes scheduled</div>
-        <div id="upcoming-time" style="font-size: 12px; color: #888; margin-top: 4px;">--:--</div>
+    <div id="upcoming-box">
+        <div style="color: var(--primary); font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">📅 Next Scheduled Class</div>
+        <div id="up-topic" style="font-size: 16px; font-weight: 700;">Topic Name</div>
+        <div id="up-time" style="font-size: 12px; color: #888; margin-top: 4px;">Time...</div>
     </div>
 
     <div id="video-overlay">
@@ -56,25 +60,25 @@
         <div style="font-size: 11px; color: var(--green); font-weight: 700; border: 1px solid var(--green); padding: 3px 8px; border-radius: 10px;">OFFLINE BATCH</div>
     </div>
 
-    <div class="grid-menu" style="margin-top: 15px;">
-        <div class="menu-item"><div class="icon-box">📚</div><span>Notes</span></div>
-        <div class="menu-item"><div class="icon-box">📝</div><span>Tests</span></div>
-        <div class="menu-item"><div class="icon-box">🎬</div><span>Videos</span></div>
-        <div class="menu-item"><div class="icon-box">⚡</div><span>Practice</span></div>
+    <div class="grid-menu">
+        <div class="menu-item" onclick="loadData('notes')"><div class="icon-box">📚</div><span>Notes</span></div>
+        <div class="menu-item" onclick="loadData('tests')"><div class="icon-box">📝</div><span>Tests</span></div>
+        <div class="menu-item" onclick="loadData('playlist')"><div class="icon-box">🎬</div><span>Videos</span></div>
+        <div class="menu-item" onclick="alert('Practice sets coming soon!')"><div class="icon-box">⚡</div><span>Practice</span></div>
     </div>
 
-    <div class="section-title">Academic Notes</div>
+    <div class="section-title" id="display-title">Academic Notes</div>
     <div id="display-list" class="list-container">
         <p style="text-align:center; color:#444;">Syncing data...</p>
     </div>
 
     <div class="section-title">📊 My Performance</div>
-    <div id="my-records-list" class="list-container"></div>
+    <div id="my-records-list" class="list-container" style="padding: 0 15px;"></div>
 
     <nav class="nav-bar">
-        <a href="#" class="nav-item active">🏠<br>Home</a>
-        <a href="#" class="nav-item">📅<br>Planner</a>
-        <a href="#" class="nav-item">👤<br>Me</a>
+        <a href="dashboard.html" class="nav-item active">🏠<br>Home</a>
+        <a href="planner.html" class="nav-item">📅<br>Planner</a>
+        <a href="profile.html" class="nav-item">👤<br>Me</a>
     </nav>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -87,17 +91,17 @@
             projectId: "phnoenix-coaching",
             appId: "1:56032052098:web:43d562162215be0eb3459b"
         };
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
         const db = firebase.firestore();
 
-        const studentClass = localStorage.getItem("userClass") || "10th";
         let currentRoomID = "";
+        const studentClass = localStorage.getItem("userClass") || "10th";
 
-        // 🟢 LISTEN FOR BOTH: LIVE AND SCHEDULED CLASSES
+        // 🟢 SYNC BOTH LIVE AND SCHEDULED
         function syncClasses() {
-            // 1. Check for Live Class
-            db.collection("current_live").doc(studentClass).onSnapshot(doc => {
-                if(doc.exists && doc.data().status === "online") {
+            // Check Live
+            db.collection("current_live").doc(studentClass).onSnapshot((doc) => {
+                if (doc.exists && doc.data().status === "online") {
                     document.getElementById('live-banner').style.display = 'flex';
                     document.getElementById('live-topic').innerText = doc.data().topic;
                     currentRoomID = doc.data().roomID;
@@ -106,21 +110,20 @@
                 }
             });
 
-            // 2. Check for Scheduled Classes
+            // Check Scheduled (8:30 Class Fix)
             db.collection("live_classes")
               .where("targetClass", "==", studentClass)
               .where("status", "==", "scheduled")
-              .orderBy("time", "asc")
-              .limit(1)
+              .orderBy("time", "asc").limit(1)
               .onSnapshot(snap => {
                   if(!snap.empty) {
                       const data = snap.docs[0].data();
-                      document.getElementById('upcoming-section').style.display = 'block';
-                      document.getElementById('upcoming-topic').innerText = data.topic;
-                      
-                      // Format Time
-                      const classDate = new Date(data.time);
-                      document.getElementById('upcoming-time').innerText = "⏰ Today at " + classDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                      document.getElementById('upcoming-box').style.display = 'block';
+                      document.getElementById('up-topic').innerText = data.topic;
+                      const d = new Date(data.time);
+                      document.getElementById('up-time').innerText = "⏰ " + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                  } else {
+                      document.getElementById('upcoming-box').style.display = 'none';
                   }
               });
         }
@@ -128,12 +131,20 @@
         function joinLiveClass() {
             if(!currentRoomID) return;
             document.getElementById('video-overlay').style.display = 'block';
-            new JitsiMeetExternalAPI("meet.jit.si", {
+            const options = {
                 roomName: currentRoomID,
                 width: '100%', height: '100%',
                 parentNode: document.querySelector('#jitsi-container'),
-                configOverwrite: { startWithAudioMuted: true, startWithVideoMuted: true }
-            });
+                userInfo: { displayName: localStorage.getItem("userName") || 'Student' },
+                configOverwrite: {
+                    disableDeepLinking: true, // 👈 MOBILE APP POPUP FIX
+                    startWithAudioMuted: true,
+                    startWithVideoMuted: true,
+                    remoteVideoMenu: { disabled: true }
+                },
+                interfaceConfigOverwrite: { TOOLBAR_BUTTONS: ['chat', 'raisehand', 'hangup'] }
+            };
+            new JitsiMeetExternalAPI("meet.jit.si", options);
         }
 
         function closeLiveClass() {
@@ -141,22 +152,22 @@
             document.getElementById('jitsi-container').innerHTML = "";
         }
 
-        function loadPerformance() {
-            const email = localStorage.getItem("userEmail") || "vishu@gmail.com";
-            db.collection("test_results").where("student", "==", email).onSnapshot(snap => {
+        function loadMyPerformance() {
+            const email = localStorage.getItem("userEmail") || "Anonymous";
+            db.collection("test_results").where("student", "==", email).orderBy("timestamp", "desc").onSnapshot(snap => {
                 const div = document.getElementById('my-records-list');
-                div.innerHTML = "";
+                div.innerHTML = snap.empty ? "<p style='text-align:center; color:#444; font-size:12px;'>No records found.</p>" : "";
                 snap.forEach(doc => {
                     const res = doc.data();
                     div.innerHTML += `<div class="item-card">
-                        <div><b>${res.subject}</b><br><small>${res.date || 'Test'}</small></div>
-                        <div style="color:var(--primary); font-weight:800;">${res.score}/${res.total}</div>
+                        <div><b>${res.subject}</b><br><small>${res.date || 'Result'}</small></div>
+                        <div style="background:var(--primary); color:#000; padding:5px 12px; border-radius:10px; font-weight:bold;">${res.score}/${res.total}</div>
                     </div>`;
                 });
             });
         }
 
-        window.onload = () => { syncClasses(); loadPerformance(); };
+        window.onload = () => { syncClasses(); loadMyPerformance(); };
     </script>
 </body>
 </html>
