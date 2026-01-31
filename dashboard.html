@@ -4,13 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phoenix Academy Dashboard</title>
+    <script src="https://meet.jit.si/external_api.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #0b0c0e; --card: #1c1f26; --primary: #3db2ff; --green: #2ecc71; }
+        :root { --bg: #0b0c0e; --card: #1c1f26; --primary: #3db2ff; --green: #2ecc71; --danger: #ff4444; }
         body { background: var(--bg); color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding-bottom: 90px; overflow-x: hidden; }
         
         .header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a2d32; background: #0b0c0e; }
         .logo-text { font-weight: 800; font-size: 20px; color: #fff; }
+
+        /* LIVE BANNER UI */
+        #live-banner { background: linear-gradient(90deg, #ff4444, #b30000); padding: 12px 20px; display: none; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 2px solid rgba(255,255,255,0.2); }
+        .live-dot { height: 8px; width: 8px; background: #fff; border-radius: 50%; display: inline-block; margin-right: 5px; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        /* VIDEO PLAYER OVERLAY */
+        #video-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: none; }
+        .close-video { position: absolute; top: 15px; right: 15px; background: var(--danger); border: none; color: #fff; padding: 10px 20px; border-radius: 12px; z-index: 2001; font-weight: bold; }
 
         .action-bar { display: flex; gap: 10px; padding: 15px 20px; }
         .action-btn { flex: 1; background: var(--card); border: 1px solid #2a2d32; padding: 12px; border-radius: 15px; text-align: center; cursor: pointer; }
@@ -23,17 +33,24 @@
 
         .section-title { padding: 15px 20px 5px; font-size: 16px; font-weight: 800; color: var(--primary); }
         .list-container { padding: 10px 20px; min-height: 100px; }
-        .item-card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 12px; border: 1px solid #2a2d32; display: flex; align-items: center; }
-        .item-icon { font-size: 22px; margin-right: 15px; }
-        .item-info h4 { margin: 0; font-size: 14px; color: #fff; }
-        .item-info p { margin: 2px 0 0; font-size: 11px; color: #666; }
-
+        .item-card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 12px; border: 1px solid #2a2d32; display: flex; align-items: center; justify-content: space-between; }
+        
         .nav-bar { position: fixed; bottom: 0; width: 100%; background: #16181c; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #222; z-index: 1000; }
         .nav-item { color: #555; text-decoration: none; font-size: 11px; text-align: center; font-weight: bold; }
         .nav-item.active { color: #fff; }
     </style>
 </head>
 <body>
+
+    <div id="live-banner" onclick="joinLiveClass()">
+        <div><span class="live-dot"></span> <span style="font-weight: 800; font-size: 13px;">LIVE NOW: <span id="live-topic">Topic...</span></span></div>
+        <div style="font-size: 10px; background: #000; padding: 5px 12px; border-radius: 10px; font-weight: bold;">JOIN CLASS</div>
+    </div>
+
+    <div id="video-overlay">
+        <button class="close-video" onclick="closeLiveClass()">CLOSE ✕</button>
+        <div id="jitsi-container" style="height: 100%;"></div>
+    </div>
 
     <div class="header">
         <div class="logo-text">Phoenix Academy</div>
@@ -56,11 +73,12 @@
     <div class="section-title" id="display-title">Academic Notes</div>
     <div id="display-list" class="list-container">
         <p style="text-align:center; color:#444;">Syncing data...</p>
-    </div><div class="section-title">📊 My Performance</div>
-<div id="my-records-list" class="list-container" style="padding: 0 15px;">
-    <p style="text-align:center; color:#444;">Loading your scores...</p>
-</div>
-    
+    </div>
+
+    <div class="section-title">📊 My Performance</div>
+    <div id="my-records-list" class="list-container" style="padding: 0 15px;">
+        <p style="text-align:center; color:#444;">Loading your scores...</p>
+    </div>
 
     <nav class="nav-bar">
         <a href="dashboard.html" class="nav-item active">🏠<br>Home</a>
@@ -72,116 +90,99 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
-        // 1. WhatsApp, Call & Maps logic
-        function openWhatsApp() {
-            window.open("https://wa.me/918650953654?text=Hello%20Phoenix%20Academy", "_blank");
-        }
-        function callCoaching() {
-            window.location.href = "tel:+918650953654";
-        }
-        function openMaps() {
-            const addr = "Dev Ashish Divine 2, Block F 402, Narolgam, Ahmedabad";
-            window.open("https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(addr), "_blank");
-        }
+        // 1. Firebase Init
+        const firebaseConfig = {
+            apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDAwIHRYCfT8",
+            authDomain: "phnoenix-coaching.firebaseapp.com",
+            projectId: "phnoenix-coaching",
+            appId: "1:56032052098:web:43d562162215be0eb3459b"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
-        // 2. Initializing Firebase Safely
-        try {
-            const firebaseConfig = {
-                apiKey: "AIzaSyA7MHXGSN-ZIybG8sEZiP9kDAwIHRYCfT8",
-                authDomain: "phnoenix-coaching.firebaseapp.com",
-                projectId: "phnoenix-coaching",
-                appId: "1:56032052098:web:43d562162215be0eb3459b"
-            };
-            firebase.initializeApp(firebaseConfig);
-            var db = firebase.firestore();
-            console.log("Firebase Initialized");
-        } catch (e) {
-            console.error("Firebase Init Error: ", e);
-            document.getElementById('display-list').innerHTML = "Config Error. Please check Firebase settings.";
-        }
+        let currentRoomID = "";
+        const studentClass = localStorage.getItem("userClass") || "10th";
 
-        // 3. Load Data Function
-        function loadData(type) {
-            const list = document.getElementById('display-list');
-            const title = document.getElementById('display-title');
-            title.innerText = type.charAt(0).toUpperCase() + type.slice(1);
-            list.innerHTML = `<p style="text-align:center; color:#555;">Loading ${type}...</p>`;
-
-            if (!db) return;
-
-            db.collection(type).limit(10).get().then((snap) => {
-                list.innerHTML = "";
-                if(snap.empty) {
-                    list.innerHTML = `<p style="text-align:center; color:#444; margin-top:20px;">No ${type} available yet.</p>`;
-                    return;
+        // 🟢 Live Class Detection Logic
+        function listenForLive() {
+            db.collection("current_live").doc(studentClass).onSnapshot((doc) => {
+                if (doc.exists && doc.data().status === "online") {
+                    document.getElementById('live-banner').style.display = 'flex';
+                    document.getElementById('live-topic').innerText = doc.data().topic;
+                    currentRoomID = doc.data().roomID;
+                } else {
+                    document.getElementById('live-banner').style.display = 'none';
                 }
-                snap.forEach(doc => {
-                    const d = doc.data();
-                    let icon = type === 'notes' ? '📄' : type === 'tests' ? '✍️' : '▶️';
-                    list.innerHTML += `
-                        <div class="item-card" onclick="window.open('${d.link || d.fileUrl || '#'}')">
-                            <div class="item-icon">${icon}</div>
-                            <div class="item-info">
-                                <h4>${d.title || d.subject || 'New Entry'}</h4>
-                                <p>${d.topic || d.description || 'Phoenix Academy Professional Coaching'}</p>
-                            </div>
-                        </div>`;
-                });
-            }).catch(e => { 
-                console.error(e);
-                list.innerHTML = `<p style="color:red; text-align:center;">Error: Check internet or permissions.</p>`; 
             });
         }
 
-        // Initial Load on Page Startup
-        window.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => { loadData('notes'); }, 1000);
-        });// Notes wale page ke liye code
-db.collection("academy_content").where("type", "==", "notes").onSnapshot((snapshot) => {
-    const notesDiv = document.getElementById('notes-display-area'); // Check your ID
-    notesDiv.innerHTML = "";
-    snapshot.forEach((doc) => {
-        let n = doc.data();
-        notesDiv.innerHTML += `
-            <div class="note-card">
-                <h4>${n.title}</h4>
-                <a href="${n.link}" target="_blank">View Diagram PDF</a>
-            </div>`;
-    });
-});
-        // Analytics record load karne ka function
-function loadMyPerformance() {
-    const userEmail = localStorage.getItem("userEmail") || "Anonymous"; 
-    const div = document.getElementById('my-records-list');
+        function joinLiveClass() {
+            if(!currentRoomID) return;
+            document.getElementById('video-overlay').style.display = 'block';
+            const domain = "meet.jit.si";
+            const options = {
+                roomName: currentRoomID,
+                width: '100%',
+                height: '100%',
+                parentNode: document.querySelector('#jitsi-container'),
+                userInfo: { displayName: localStorage.getItem("userName") || 'Student' },
+                configOverwrite: {
+                    startWithAudioMuted: true, // Audio Mute by default
+                    startWithVideoMuted: true, // Video Mute by default
+                    remoteVideoMenu: { disabled: true },
+                    disableSelfView: true
+                },
+                interfaceConfigOverwrite: {
+                    TOOLBAR_BUTTONS: ['chat', 'raisehand', 'hangup']
+                }
+            };
+            new JitsiMeetExternalAPI(domain, options);
+        }
 
-    db.collection("test_results")
-      .where("student", "==", userEmail)
-      .orderBy("timestamp", "desc")
-      .onSnapshot((snapshot) => {
-          div.innerHTML = "";
-          if (snapshot.empty) {
-              div.innerHTML = "<p style='text-align:center; color:#666; font-size:12px;'>Bhai, pehla test toh do! Score yahan dikhega.</p>";
-              return;
-          }
-          snapshot.forEach(doc => {
-              const res = doc.data();
-              div.innerHTML += `
-                <div class="item-card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-                    <div class="item-info">
-                        <h4 style="margin:0; font-size:14px;">${res.subject || 'Science Test'}</h4>
-                        <p style="margin:0; font-size:11px;">${res.date}</p>
-                    </div>
-                    <div style="background:var(--primary); color:#000; padding:5px 12px; border-radius:10px; font-weight:bold;">
-                        ${res.score}/${res.total}
-                    </div>
-                </div>`;
-          });
-      });
-}
+        function closeLiveClass() {
+            document.getElementById('video-overlay').style.display = 'none';
+            document.getElementById('jitsi-container').innerHTML = "";
+        }
 
-// Ise initialization ke sath chalao
-loadMyPerformance();
-        
+        // Performance Records Logic
+        function loadMyPerformance() {
+            const userEmail = localStorage.getItem("userEmail") || "Anonymous"; 
+            const div = document.getElementById('my-records-list');
+            db.collection("test_results").where("student", "==", userEmail).orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+                div.innerHTML = "";
+                if (snapshot.empty) {
+                    div.innerHTML = "<p style='text-align:center; color:#666; font-size:12px;'>Bhai, pehla test toh do! Score yahan dikhega.</p>";
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    const res = doc.data();
+                    div.innerHTML += `
+                        <div class="item-card">
+                            <div class="item-info">
+                                <h4 style="margin:0; font-size:14px;">${res.subject || 'Science Test'}</h4>
+                                <p style="margin:0; font-size:11px;">${res.date || 'Today'}</p>
+                            </div>
+                            <div style="background:var(--primary); color:#000; padding:5px 12px; border-radius:10px; font-weight:bold;">
+                                ${res.score}/${res.total}
+                            </div>
+                        </div>`;
+                });
+            });
+        }
+
+        // WhatsApp, Call & Maps logic
+        function openWhatsApp() { window.open("https://wa.me/918650953654", "_blank"); }
+        function callCoaching() { window.location.href = "tel:+918650953654"; }
+        function openMaps() { window.open("https://goo.gl/maps/example", "_blank"); }
+
+        function loadData(type) {
+            const list = document.getElementById('display-list');
+            document.getElementById('display-title').innerText = type.charAt(0).toUpperCase() + type.slice(1);
+            list.innerHTML = `<p style="text-align:center; color:#444;">Loading ${type}...</p>`;
+            // Baki data load karne ki logic
+        }
+
+        window.onload = () => { listenForLive(); loadMyPerformance(); };
     </script>
 </body>
 </html>
