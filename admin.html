@@ -97,11 +97,12 @@
             parentNode: document.querySelector('#live-container'),
             userInfo: { displayName: 'Instructor (Phoenix Academy)' },
             configOverwrite: {
+                disableDeepLinking: true, // 👈 MOBILE APP POPUP REMOVED
                 startWithAudioMuted: false,
                 startWithVideoMuted: false,
-                disableRemoteMute: false, // Aap bacho ko mute kar sakein
+                disableRemoteMute: false, 
                 prejoinPageEnabled: false,
-                remoteVideoMenu: { disabled: true } // Bacho ki video hide karne ke liye
+                remoteVideoMenu: { disabled: true } 
             },
             interfaceConfigOverwrite: {
                 TOOLBAR_BUTTONS: ['microphone', 'camera', 'desktop', 'chat', 'raisehand', 'hangup']
@@ -124,11 +125,16 @@
         const time = document.getElementById('liveTime').value;
         if(!topic || !time) return alert("Fill Topic and Time!");
         await db.collection("live_classes").add({
-            targetClass: cls, topic: topic, time: time, status: "scheduled", timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            targetClass: cls, 
+            topic: topic, 
+            time: time, 
+            status: "scheduled", 
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
-        alert("Scheduled!");
+        alert("Class Scheduled Successfully! Dashboard check karein.");
     }
 
+    // Results & Bulk Upload functions remain same
     function loadAnalytics() {
         db.collection("test_results").orderBy("timestamp", "desc").limit(10).onSnapshot(snap => {
             const div = document.getElementById('analytics-list');
