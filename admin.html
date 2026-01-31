@@ -1,13 +1,11 @@
-DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phoenix Admin | Master Control</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
-    
     <script src="https://meet.jit.si/external_api.js"></script>
-
     <style>
         :root { --primary: #3db2ff; --danger: #ff4444; --bg: #0b0c0e; --card: #16181c; }
         body { background: var(--bg); color: white; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; }
@@ -21,9 +19,17 @@ DOCTYPE html>
         input, select, textarea { width: 100%; padding: 12px; background: #000; border: 1px solid #333; color: white; border-radius: 12px; margin-bottom: 10px; outline: none; }
         .btn { width: 100%; padding: 14px; border: none; color: white; font-weight: 700; border-radius: 12px; cursor: pointer; text-transform: uppercase; font-size: 12px; }
         .list-item { background: #000; padding: 15px; border-radius: 15px; margin-bottom: 10px; border-left: 4px solid var(--primary); }
-        /* 🟢 Naya Jitsi Container */
+        
+        /* 📁 Folder UI Styles */
+        details { background: var(--card); border-radius: 15px; margin-bottom: 12px; border: 1px solid #2a2d32; }
+        summary { padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; list-style: none; outline: none; }
+        summary::-webkit-details-marker { display: none; }
+        .folder-content { background: #000; padding: 10px; border-top: 1px solid #222; max-height: 350px; overflow-y: auto; }
+        .class-tag { background: var(--primary); color: #000; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: 800; margin-right: 8px; }
+        .q-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #1a1a1a; font-size: 11px; align-items: center; }
+        .del-btn { color: var(--danger); font-size: 14px; cursor: pointer; padding: 5px; }
+        
         #jitsi-container { width: 100%; height: 550px; border-radius: 20px; display: none; margin-top: 15px; overflow: hidden; background: #000; }
-        .q-row { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #222; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -48,19 +54,25 @@ DOCTYPE html>
             <button class="btn" style="background:var(--primary)" onclick="saveSchedule()">📅 SAVE SCHEDULE</button>
         </div>
         <div id="upcoming-list"></div>
-        
         <div id="jitsi-container"></div>
-        
         <button id="stop-btn" class="btn" style="display:none; background:var(--danger); margin-top:10px;" onclick="stopLive()">⏹ END SESSION</button>
     </div>
 
     <div id="test-sec" class="section">
         <div class="admin-card">
             <h3>🚀 Bulk Upload Quiz</h3>
+            <select id="testClassTarget">
+                <option value="9th">Class 9th</option>
+                <option value="10th">Class 10th</option>
+                <option value="11th">Class 11th</option>
+                <option value="12th">Class 12th</option>
+                <option value="NEET UG">NEET UG</option>
+            </select>
             <input type="text" id="chapterNameInput" placeholder="Chapter Name">
-            <textarea id="bulkJsonInput" placeholder='Paste JSON here...' style="height: 100px;"></textarea>
+            <textarea id="bulkJsonInput" placeholder='Paste JSON here...' style="height: 80px;"></textarea>
             <button class="btn" style="background:var(--primary)" onclick="uploadBulkQuiz()">🚀 UPLOAD NOW</button>
         </div>
+        
         <div id="chapters-list"></div>
     </div>
 
@@ -96,44 +108,22 @@ DOCTYPE html>
         el.classList.add('active');
     }
 
-    // --- 🟢 FIX: JITSI EXTERNAL API (BYPASS 5-MIN & APP PROMPT) ---
+    // --- LIVE FUNCTIONS ---
     function startLiveNow(cls, topic, id) {
         currentCls = cls;
         const roomName = "Phoenix_" + cls.replace(/\s+/g, '') + "_" + Math.floor(Math.random() * 1000000);
-        
         document.getElementById('jitsi-container').style.display = "block";
         document.getElementById('upcoming-list').style.display = "none";
         document.getElementById('stop-btn').style.display = "block";
-
         const domain = "meet.jit.si";
         const options = {
-            roomName: roomName,
-            width: '100%',
-            height: 550,
+            roomName: roomName, width: '100%', height: 550,
             parentNode: document.querySelector('#jitsi-container'),
-            configOverwrite: {
-                prejoinPageEnabled: false,
-                disableDeepLinking: true,
-                enableWelcomePage: false,
-            },
-            interfaceConfigOverwrite: {
-                SHOW_JITSI_WATERMARK: false,
-                RECENT_LIST_ENABLED: false
-            }
+            configOverwrite: { prejoinPageEnabled: false, disableDeepLinking: true },
         };
-        
-        // Purana instance clear karein agar hai toh
         if(jitsiAPI) jitsiAPI.dispose();
-        
-        // Naya API call
         jitsiAPI = new JitsiMeetExternalAPI(domain, options);
-
-        db.collection("current_live").doc(cls).set({ 
-            topic, 
-            roomID: roomName, 
-            status: "online",
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        db.collection("current_live").doc(cls).set({ topic, roomID: roomName, status: "online", timestamp: firebase.firestore.FieldValue.serverTimestamp() });
         db.collection("live_classes").doc(id).delete();
     }
 
@@ -143,7 +133,6 @@ DOCTYPE html>
         location.reload();
     }
 
-    // --- FIREBASE DATA LOADERS (Wahi logic par optimized) ---
     async function saveSchedule() {
         const topic = document.getElementById('liveTopic').value;
         const cls = document.getElementById('liveClassTarget').value;
@@ -158,8 +147,7 @@ DOCTYPE html>
             let h = "";
             snap.forEach(doc => {
                 const d = doc.data();
-                h += `<div class="list-item">
-                    <b>${d.topic}</b><br><small>${d.targetClass} | ${d.time}</small>
+                h += `<div class="list-item"><b>${d.topic}</b><br><small>${d.targetClass} | ${d.time}</small>
                     <button class="btn" style="background:#2ecc71; margin-top:10px; padding:10px;" onclick="startLiveNow('${d.targetClass}','${d.topic}','${doc.id}')">START LIVE</button>
                 </div>`;
             });
@@ -167,10 +155,12 @@ DOCTYPE html>
         });
     }
 
+    // --- 📂 TEST FOLDER LOGIC ---
     async function uploadBulkQuiz() {
         const raw = document.getElementById('bulkJsonInput').value;
         const chap = document.getElementById('chapterNameInput').value;
-        const cls = document.getElementById('liveClassTarget').value;
+        const cls = document.getElementById('testClassTarget').value;
+        if(!chap || !raw) return alert("Details bhariye!");
         try {
             const qs = JSON.parse(raw);
             const batch = db.batch();
@@ -179,38 +169,47 @@ DOCTYPE html>
                 batch.set(ref, { ...q, chapter: chap, targetClass: cls, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
             });
             await batch.commit();
-            alert("Uploaded!");
+            alert("Success!");
             document.getElementById('bulkJsonInput').value = "";
         } catch(e) { alert("JSON Error!"); }
     }
 
     function loadTests() {
         db.collection("polls").onSnapshot(snap => {
-            let chapters = {};
+            let groups = {};
             snap.forEach(doc => {
                 const d = doc.data();
-                if(!chapters[d.chapter]) chapters[d.chapter] = [];
-                chapters[d.chapter].push({ id: doc.id, text: d.question });
+                let key = `${d.targetClass || '9th'} | ${d.chapter}`;
+                if(!groups[key]) groups[key] = [];
+                groups[key].push({ id: doc.id, ...d });
             });
+
             let h = "";
-            for(let name in chapters) {
-                h += `<div class="list-item" style="border-left-color:orange">
-                    <div style="display:flex; justify-content:space-between">
-                        <b>${name}</b>
-                        <button style="color:red; background:none; border:none; font-size:10px; cursor:pointer;" onclick="deleteFullChapter('${name}')">DELETE TEST</button>
+            for(let key in groups) {
+                const [cls, chap] = key.split(' | ');
+                h += `
+                <details>
+                    <summary>
+                        <span><span class="class-tag">${cls}</span> <b>${chap}</b></span>
+                        <span style="font-size:10px; color:#888;">${groups[key].length} Qs ▾</span>
+                    </summary>
+                    <div class="folder-content">
+                        <button onclick="deleteFullChapter('${chap}')" style="width:100%; padding:8px; background:#1a1a1a; color:red; border:1px solid red; border-radius:8px; margin-bottom:10px; cursor:pointer; font-size:10px;">DELETE ENTIRE FOLDER</button>
+                        ${groups[key].map(q => `
+                            <div class="q-row">
+                                <span>${q.question.substring(0,35)}...</span>
+                                <span class="del-btn" onclick="deleteDoc('polls','${q.id}')">✖</span>
+                            </div>
+                        `).join('')}
                     </div>
-                    <div style="margin-top:10px; border-top:1px solid #222;">`;
-                chapters[name].forEach(q => {
-                    h += `<div class="q-row"><span>${q.text.substring(0,30)}...</span><span onclick="deleteDoc('polls','${q.id}')" style="color:red; cursor:pointer">✖</span></div>`;
-                });
-                h += `</div></div>`;
+                </details>`;
             }
-            document.getElementById('chapters-list').innerHTML = h;
+            document.getElementById('chapters-list').innerHTML = h || "No folders yet.";
         });
     }
 
     async function deleteFullChapter(name) {
-        if(!confirm("Poora test uda dein?")) return;
+        if(!confirm("Delete this entire chapter?")) return;
         const snap = await db.collection("polls").where("chapter", "==", name).get();
         const batch = db.batch();
         snap.forEach(doc => batch.delete(doc.ref));
@@ -230,8 +229,7 @@ DOCTYPE html>
         });
     }
 
-    async function deleteDoc(c, i) { if(confirm("Delete item?")) await db.collection(c).doc(i).delete(); }
-
+    async function deleteDoc(c, i) { if(confirm("Delete this question?")) await db.collection(c).doc(i).delete(); }
     window.onload = () => { loadLive(); loadTests(); loadResults(); };
 </script>
 </body>
