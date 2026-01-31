@@ -23,9 +23,8 @@
         #jitsi-container { width: 100%; height: 550px; border-radius: 20px; display: none; margin-top: 15px; overflow: hidden; background: #000; }
         .q-row { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #222; font-size: 11px; color: #bbb; }
         
-        /* 🟢 NEW: Folder Style CSS */
-        summary { list-style: none; display: flex; justify-content: space-between; align-items: center; padding: 5px 0; }
-        details { transition: all 0.3s ease; }
+        /* Folder Style CSS */
+        summary { list-style: none; display: flex; justify-content: space-between; align-items: center; padding: 5px 0; outline: none; cursor: pointer; }
         details[open] summary { border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 10px; color: var(--primary); }
         .folder-badge { background: #222; padding: 2px 8px; border-radius: 5px; font-size: 10px; color: #888; }
     </style>
@@ -58,20 +57,19 @@
 
     <div id="test-sec" class="section">
         <div class="admin-card">
-            <h3>🚀 Create Foldered Test</h3>
-            <label style="font-size: 11px; color: #888; margin-left: 5px;">Select Class:</label>
+            <h3>🚀 Bulk Upload Quiz</h3>
+            <label style="font-size: 11px; color: #888; margin-bottom: 5px; display: block;">Target Class:</label>
             <select id="testClassTarget">
-                <option value="9th">Class 9th</option>
-                <option value="10th">Class 10th</option>
-                <option value="11th">Class 11th</option>
-                <option value="12th">Class 12th</option>
+                <option value="9th">9th</option>
+                <option value="10th">10th</option>
+                <option value="11th">11th</option>
+                <option value="12th">12th</option>
                 <option value="NEET UG">NEET UG</option>
             </select>
-            <input type="text" id="chapterNameInput" placeholder="Chapter Name (e.g. Cell Division)">
+            <input type="text" id="chapterNameInput" placeholder="Chapter Name (e.g. Optics)">
             <textarea id="bulkJsonInput" placeholder='Paste JSON here...' style="height: 100px;"></textarea>
             <button class="btn" style="background:var(--primary)" onclick="uploadBulkQuiz()">🚀 UPLOAD NOW</button>
         </div>
-        
         <h4 style="margin: 20px 0 10px 5px; color: #888;">📂 UPLOADED TESTS</h4>
         <div id="chapters-list"></div>
     </div>
@@ -108,137 +106,93 @@
         el.classList.add('active');
     }
 
-    // --- JITSI CONTROL ---
-    function startLiveNow(cls, topic, id) {
-        currentCls = cls;
-        const roomName = "Phoenix_" + cls.replace(/\s+/g, '') + "_" + Date.now();
-        document.getElementById('jitsi-container').style.display = "block";
-        document.getElementById('upcoming-list').style.display = "none";
-        document.getElementById('stop-btn').style.display = "block";
-
-        const options = {
-            roomName: roomName,
-            width: '100%',
-            height: 550,
-            parentNode: document.querySelector('#jitsi-container'),
-            configOverwrite: { prejoinPageEnabled: false, disableDeepLinking: true },
-            interfaceConfigOverwrite: { SHOW_JITSI_WATERMARK: false }
-        };
-        jitsiAPI = new JitsiMeetExternalAPI("meet.jit.si", options);
-        db.collection("current_live").doc(cls).set({ topic, roomID: roomName, status: "online" });
-        db.collection("live_classes").doc(id).delete();
-    }
-
-    function stopLive() {
-        if(jitsiAPI) jitsiAPI.dispose();
-        if(currentCls) db.collection("current_live").doc(currentCls).update({ status: "offline" });
-        location.reload();
-    }
-
-    // --- 🟢 UPDATED: BULK UPLOAD WITH CLASS DATA ---
     async function uploadBulkQuiz() {
         const raw = document.getElementById('bulkJsonInput').value;
         const chap = document.getElementById('chapterNameInput').value;
-        const cls = document.getElementById('testClassTarget').value; // Get class
-        
-        if(!chap || !raw) return alert("Bhai, Details bhariye!");
-        
+        const cls = document.getElementById('testClassTarget').value;
+        if(!chap || !raw) return alert("Details bhariye!");
         try {
             const qs = JSON.parse(raw);
             const batch = db.batch();
             qs.forEach(q => {
                 const ref = db.collection("polls").doc();
-                batch.set(ref, { 
-                    ...q, 
-                    chapter: chap, 
-                    targetClass: cls, 
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp() 
-                });
+                batch.set(ref, { ...q, chapter: chap, targetClass: cls, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
             });
             await batch.commit();
-            alert("Test Saved Successfully in Folder!");
+            alert("Test Uploaded Successfully!");
             document.getElementById('bulkJsonInput').value = "";
-            document.getElementById('chapterNameInput').value = "";
-        } catch(e) { alert("JSON Format Check Karein!"); }
+        } catch(e) { alert("JSON Error!"); }
     }
 
-    // --- 🟢 UPDATED: FOLDER SYSTEM LOGIC ---
     function loadTests() {
         db.collection("polls").onSnapshot(snap => {
-            let groups = {};
+            let folders = {};
             snap.forEach(doc => {
                 const d = doc.data();
-                // Groups tests by Class + Chapter
-                const groupKey = d.targetClass ? `${d.targetClass} | ${d.chapter}` : `Unassigned | ${d.chapter}`;
-                if(!groups[groupKey]) groups[groupKey] = [];
-                groups[groupKey].push({ id: doc.id, ...d });
+                const key = `${d.targetClass || '9th'} | ${d.chapter}`;
+                if(!folders[key]) folders[key] = [];
+                folders[key].push({ id: doc.id, ...d });
             });
-            
             let h = "";
-            for(let groupTitle in groups) {
-                h += `
-                <details class="list-item" style="border-left-color:orange">
+            for(let title in folders) {
+                h += `<details class="list-item" style="border-left-color:orange">
                     <summary>
-                        <b>📁 ${groupTitle}</b>
-                        <span class="folder-badge">${groups[groupTitle].length} Qs</span>
-                        <button onclick="deleteChapter('${groups[groupTitle][0].chapter}')" style="color:var(--danger); background:none; border:none; font-size:10px; cursor:pointer;">DELETE FOLDER</button>
+                        <b>📁 ${title}</b>
+                        <span class="folder-badge">${folders[title].length} Qs</span>
+                        <button onclick="deleteChapter('${folders[title][0].chapter}')" style="color:red; background:none; border:none; font-size:10px; cursor:pointer;">DELETE</button>
                     </summary>
-                    <div style="margin-top:10px; padding: 5px; background: #000; border-radius: 10px;">
-                        ${groups[groupTitle].map(q => `
-                            <div class="q-row">
-                                <span>${q.question.substring(0,35)}...</span>
-                                <span onclick="deleteDoc('polls','${q.id}')" style="color:red; cursor:pointer">✖</span>
-                            </div>
-                        `).join('')}
+                    <div style="margin-top:10px;">
+                        ${folders[title].map(q => `<div class="q-row"><span>${q.question.substring(0,30)}...</span><span onclick="deleteDoc('polls','${q.id}')" style="color:red; cursor:pointer">✖</span></div>`).join('')}
                     </div>
                 </details>`;
             }
-            document.getElementById('chapters-list').innerHTML = h || "No Folders Yet.";
+            document.getElementById('chapters-list').innerHTML = h || "No tests.";
         });
     }
 
     async function deleteChapter(name) {
-        if(!confirm("Poora folder uda dein?")) return;
+        if(!confirm("Delete Folder?")) return;
         const snap = await db.collection("polls").where("chapter", "==", name).get();
         const batch = db.batch();
         snap.forEach(doc => batch.delete(doc.ref));
         await batch.commit();
     }
 
-    // --- BASIC LOADER FUNCTIONS ---
+    function startLiveNow(cls, topic, id) {
+        currentCls = cls;
+        const roomName = "Phoenix_" + cls + "_" + Date.now();
+        document.getElementById('jitsi-container').style.display = "block";
+        document.getElementById('upcoming-list').style.display = "none";
+        document.getElementById('stop-btn').style.display = "block";
+        jitsiAPI = new JitsiMeetExternalAPI("meet.jit.si", {
+            roomName: roomName, parentNode: document.querySelector('#jitsi-container'),
+            width: '100%', height: 550,
+            configOverwrite: { prejoinPageEnabled: false, disableDeepLinking: true }
+        });
+        db.collection("current_live").doc(cls).set({ topic, roomID: roomName, status: "online" });
+        db.collection("live_classes").doc(id).delete();
+    }
+
+    function stopLive() { if(jitsiAPI) jitsiAPI.dispose(); location.reload(); }
     async function saveSchedule() {
         const topic = document.getElementById('liveTopic').value;
         const cls = document.getElementById('liveClassTarget').value;
         const time = document.getElementById('liveTime').value;
-        await db.collection("live_classes").add({ topic, targetClass: cls, time, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-        alert("Class Scheduled!");
+        await db.collection("live_classes").add({ topic, targetClass: cls, time });
+        alert("Scheduled!");
     }
-
     function loadLive() {
-        db.collection("live_classes").orderBy("time", "asc").onSnapshot(snap => {
+        db.collection("live_classes").onSnapshot(snap => {
             let h = "";
             snap.forEach(doc => {
                 const d = doc.data();
-                h += `<div class="list-item"><b>${d.topic}</b><br><small>${d.targetClass} | ${d.time}</small>
-                <button class="btn" style="background:#2ecc71; margin-top:10px; padding:8px;" onclick="startLiveNow('${d.targetClass}','${d.topic}','${doc.id}')">START LIVE</button></div>`;
+                h += `<div class="list-item"><b>${d.topic}</b> (${d.targetClass})<br><button class="btn" style="background:#2ecc71; margin-top:5px; padding:5px;" onclick="startLiveNow('${d.targetClass}','${d.topic}','${doc.id}')">START</button></div>`;
             });
             document.getElementById('upcoming-list').innerHTML = h;
         });
     }
-
-    function loadResults() {
-        db.collection("test_results").orderBy("timestamp", "desc").limit(10).onSnapshot(snap => {
-            let h = "";
-            snap.forEach(doc => {
-                const r = doc.data();
-                h += `<div class="list-item" style="border-left-color:#2ecc71"><b>${r.student}</b>: ${r.score}/${r.total}</div>`;
-            });
-            document.getElementById('results-list').innerHTML = h;
-        });
-    }
-
-    async function deleteDoc(c, i) { if(confirm("Delete Question?")) await db.collection(c).doc(i).delete(); }
-    window.onload = () => { loadLive(); loadTests(); loadResults(); };
+    async function deleteDoc(c, i) { if(confirm("Delete?")) await db.collection(c).doc(i).delete(); }
+    window.onload = () => { loadLive(); loadTests(); };
 </script>
 </body>
 </html>
