@@ -48,6 +48,11 @@
         <div id="live-container"></div>
     </div>
 
+    <div class="admin-card" style="border-color: #555;">
+        <h3>📅 Upcoming Schedule</h3>
+        <div id="schedule-list" style="font-size: 13px; color: #888;">Checking...</div>
+    </div>
+
     <div class="admin-card" style="border-color: var(--primary);">
         <h3>📝 Create Bulk Test</h3>
         <select id="targetClassTest">
@@ -89,48 +94,57 @@
         const roomID = "PhoenixLive_" + cls + "_" + Math.floor(Math.random() * 10000);
         document.getElementById('live-container').style.display = "block";
 
-        const domain = "meet.jit.si";
         const options = {
-            roomName: roomID,
-            width: '100%',
-            height: 450,
+            roomName: roomID, width: '100%', height: 450,
             parentNode: document.querySelector('#live-container'),
             userInfo: { displayName: 'Instructor (Phoenix Academy)' },
             configOverwrite: {
-                disableDeepLinking: true,       // 👈 App popup band
-                prejoinPageEnabled: false,      // 👈 Seedha entry
-                enableWelcomePage: false,       // 👈 PIN/Dial-in screen gayab
-                startWithAudioMuted: false,
-                startWithVideoMuted: false,
-                disableRemoteMute: false, 
-                remoteVideoMenu: { disabled: true } 
+                disableDeepLinking: true, prejoinPageEnabled: false, enableWelcomePage: false,
+                startWithAudioMuted: false, startWithVideoMuted: false
             },
             interfaceConfigOverwrite: {
-                MOBILE_APP_PROMO: false,        // 👈 App ad band
-                SHOW_CHROME_EXTENSION_BANNER: false,
+                MOBILE_APP_PROMO: false,
                 TOOLBAR_BUTTONS: ['microphone', 'camera', 'desktop', 'chat', 'raisehand', 'hangup']
             }
         };
-        const api = new JitsiMeetExternalAPI(domain, options);
+        new JitsiMeetExternalAPI("meet.jit.si", options);
 
         await db.collection("current_live").doc(cls).set({
-            topic: topic,
-            roomID: roomID,
-            status: "online",
-            type: "in-app",
+            topic: topic, roomID: roomID, status: "online",
             startTime: firebase.firestore.FieldValue.serverTimestamp()
         });
     }
 
+    // UPDATED: Proper Timestamp for Planner Sync
     async function scheduleClass() {
         const cls = document.getElementById('liveClassTarget').value;
         const topic = document.getElementById('liveTopic').value;
-        const time = document.getElementById('liveTime').value;
-        if(!topic || !time) return alert("Fill details!");
+        const timeInput = document.getElementById('liveTime').value;
+        if(!topic || !timeInput) return alert("Fill details!");
+
         await db.collection("live_classes").add({
-            targetClass: cls, topic: topic, time: time, status: "scheduled", timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            targetClass: cls,
+            topic: topic,
+            time: timeInput, // HTML input time
+            status: "scheduled",
+            timestamp: firebase.firestore.FieldValue.serverTimestamp() // 👈 Sorting ke liye
         });
-        alert("Scheduled!");
+        alert("Class Scheduled! Ab Planner check karein.");
+    }
+
+    // NEW: Load Schedule in Admin
+    function loadSchedule() {
+        db.collection("live_classes").orderBy("timestamp", "desc").limit(5).onSnapshot(snap => {
+            const div = document.getElementById('schedule-list');
+            div.innerHTML = snap.empty ? "No classes scheduled." : "";
+            snap.forEach(doc => {
+                const data = doc.data();
+                div.innerHTML += `<div class="res-card" style="border-left-color:var(--primary)">
+                    <div><b>${data.topic}</b><br><small>${data.targetClass} | ${data.time}</small></div>
+                    <button class="del-btn" onclick="deleteDoc('live_classes','${doc.id}')">✖</button>
+                </div>`;
+            });
+        });
     }
 
     function loadAnalytics() {
@@ -141,13 +155,13 @@
                 const res = doc.data();
                 div.innerHTML += `<div class="res-card">
                     <div><b>${res.student}</b><br><small>${res.subject}</small></div>
-                    <div style="color:var(--notice); font-weight:800;">${res.score}/${res.total} <button class="del-btn" onclick="deleteRes('${doc.id}')">✖</button></div>
+                    <div style="color:var(--notice); font-weight:800;">${res.score}/${res.total} <button class="del-btn" onclick="deleteDoc('test_results','${doc.id}')">✖</button></div>
                 </div>`;
             });
         });
     }
 
-    async function deleteRes(id) { if(confirm("Delete?")) await db.collection("test_results").doc(id).delete(); }
+    async function deleteDoc(col, id) { if(confirm("Khatam kar dein?")) await db.collection(col).doc(id).delete(); }
 
     async function uploadBulkQuiz() {
         const raw = document.getElementById('bulkJsonInput').value;
@@ -166,7 +180,7 @@
         } catch(e) { alert("JSON Error!"); }
     }
 
-    window.onload = () => { loadAnalytics(); };
+    window.onload = () => { loadAnalytics(); loadSchedule(); };
 </script>
 </body>
 </html>
