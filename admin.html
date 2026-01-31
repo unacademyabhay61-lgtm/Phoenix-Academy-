@@ -16,11 +16,28 @@
         .btn { width: 100%; padding: 14px; border: none; color: white; font-weight: 700; border-radius: 12px; cursor: pointer; margin-top: 10px; transition: 0.2s; text-transform: uppercase; }
         .btn-blue { background: var(--primary); }
         .btn-red { background: var(--danger); font-size: 11px; padding: 6px 12px; border-radius: 8px; border:none; color:white; cursor:pointer; }
-        .list-item { background: #000; padding: 12px; border-radius: 12px; border-left: 4px solid var(--primary); margin-bottom: 10px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* Compact Result Card Styling */
+        .res-card { 
+            background: #000; 
+            padding: 8px 12px; 
+            border-radius: 12px; 
+            margin-bottom: 6px; 
+            border-left: 3px solid var(--notice); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+        }
+        .res-info { flex: 1; }
+        .res-name { font-size: 13px; font-weight: 700; color: white; display: block; }
+        .res-meta { font-size: 10px; color: #888; }
+        .res-score-box { text-align: right; display: flex; align-items: center; gap: 12px; }
+        .res-score { color: var(--notice); font-weight: 800; font-size: 14px; }
+        .del-res { color: var(--danger); background: none; border: none; cursor: pointer; font-size: 16px; font-weight: bold; padding: 0 4px; }
+
         .chapter-box { background: #1c2128; padding: 15px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #333; }
         .hidden { display: none; }
         .class-tag { font-size: 10px; background: var(--primary); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-bottom: 5px; display: inline-block; }
-        .res-card { background: #000; padding: 12px; border-radius: 12px; margin-bottom: 8px; border-left: 4px solid var(--notice); }
     </style>
 </head>
 <body>
@@ -28,9 +45,13 @@
 <div class="container">
     <h2 style="text-align:center;">PHOENIX <span style="color:var(--primary)">CONTROL</span></h2>
 
+    <div class="admin-card" style="border-color: #ffbc00;">
+        <h3 style="color: #ffbc00;">📊 Student Results</h3>
+        <div id="analytics-list">Loading...</div>
+    </div>
+
     <div class="admin-card" style="border-color: #3db2ff;">
-        <h3>📝 Create Bulk Test (Polls)</h3>
-        <label>Step 1: Select Class</label>
+        <h3>📝 Create Bulk Test</h3>
         <select id="targetClassTest">
             <option value="9th">9th</option>
             <option value="10th">10th</option>
@@ -38,27 +59,18 @@
             <option value="12th">12th</option>
             <option value="NEET UG">NEET UG</option>
         </select>
-        <label>Step 2: Chapter Name</label>
-        <input type="text" id="chapterNameInput" placeholder="e.g. Life Processes">
-        <label>Step 3: Paste JSON</label>
-        <textarea id="bulkJsonInput" placeholder='JSON data here...' style="height: 100px;"></textarea>
-        <button class="btn btn-blue" id="bulkUploadBtn" onclick="uploadBulkQuiz()">🚀 UPLOAD QUESTIONS</button>
-    </div>
-
-    <div class="admin-card" style="border-color: #ffbc00;">
-        <h3 style="color: #ffbc00;">📊 Student Results</h3>
-        <div id="analytics-list">Results load ho rahe hain...</div>
+        <input type="text" id="chapterNameInput" placeholder="Chapter Name">
+        <textarea id="bulkJsonInput" placeholder='Paste JSON here...' style="height: 80px;"></textarea>
+        <button class="btn btn-blue" id="bulkUploadBtn" onclick="uploadBulkQuiz()">🚀 UPLOAD</button>
     </div>
 
     <div class="admin-card" style="border-color: #ff4444;">
-        <h3 style="color: #ff4444;">📂 Organized Test Manager</h3>
+        <h3 style="color: #ff4444;">📂 Test Manager</h3>
         <div id="test-groups-container">Loading Chapters...</div>
     </div>
 
     <div class="admin-card" style="border-color: #ffbc00; text-align: center;">
-        <h3 style="color: #ffbc00;">🛠️ Emergency Fix</h3>
-        <p style="font-size: 11px; color: #888;">Agar bacho ko purane tests nahi dikh rahe, toh isse dabayein:</p>
-        <button class="btn" style="background: #ffbc00; color: black;" onclick="fixMissingClasses()">🔧 FORCE VISIBILITY (FIX ALL)</button>
+        <button class="btn" style="background: #ffbc00; color: black; padding: 10px;" onclick="fixMissingClasses()">🔧 FORCE VISIBILITY (FIX ALL)</button>
     </div>
 </div>
 
@@ -75,55 +87,56 @@
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.firestore();
 
-    // FIXED: Result Analytics Logic
+    // Compact Result Loading with Delete Button
     function loadAnalytics() {
-        db.collection("test_results").orderBy("timestamp", "desc").limit(20).onSnapshot(snap => {
+        db.collection("test_results").orderBy("timestamp", "desc").limit(30).onSnapshot(snap => {
             const div = document.getElementById('analytics-list');
             div.innerHTML = "";
             if(snap.empty) {
-                div.innerHTML = "<small style='color:#666'>Abhi tak koi result submit nahi hua.</small>";
+                div.innerHTML = "<small style='color:#666'>No results found.</small>";
                 return;
             }
             snap.forEach(doc => {
                 const res = doc.data();
+                const id = doc.id;
                 div.innerHTML += `
                 <div class="res-card">
-                    <div style="display:flex; justify-content:space-between;">
-                        <b>${res.student || 'Unknown'}</b>
-                        <b style="color:var(--notice)">${res.score}/${res.total}</b>
+                    <div class="res-info">
+                        <span class="res-name">${res.student || 'Unknown'} <small style="color:var(--primary); font-size:9px;">(${res.targetClass || 'N/A'})</small></span>
+                        <span class="res-meta">${res.subject || 'Test'}</span>
                     </div>
-                    <div style="font-size:11px; color:#aaa; margin-top:5px;">
-                        ${res.subject || 'Test'} • Class: ${res.targetClass || 'N/A'}
+                    <div class="res-score-box">
+                        <span class="res-score">${res.score}/${res.total}</span>
+                        <button class="del-res" onclick="deleteSingleResult('${id}')">✖</button>
                     </div>
                 </div>`;
             });
         });
     }
 
+    // Function to delete specific result
+    async function deleteSingleResult(id) {
+        if(confirm("Hata dein ye result?")) {
+            await db.collection("test_results").doc(id).delete();
+        }
+    }
+
     async function fixMissingClasses() {
-        const cls = prompt("Purane tests kis class mein dikhane hain? (e.g. 10th)");
+        const cls = prompt("Enter Class (e.g. 10th)");
         if(!cls) return;
-        const btn = event.target;
-        btn.innerText = "⏳ Processing...";
-        btn.disabled = true;
-        try {
-            const snap = await db.collection("polls").get();
-            const batch = db.batch();
-            snap.forEach(doc => batch.update(doc.ref, { targetClass: cls }));
-            await batch.commit();
-            alert("Done!");
-            location.reload();
-        } catch(e) { alert(e.message); btn.disabled = false; }
+        const snap = await db.collection("polls").get();
+        const batch = db.batch();
+        snap.forEach(doc => batch.update(doc.ref, { targetClass: cls }));
+        await batch.commit();
+        alert("Fixed!");
+        location.reload();
     }
 
     async function uploadBulkQuiz() {
         const rawData = document.getElementById('bulkJsonInput').value;
         const chapName = document.getElementById('chapterNameInput').value;
         const targetClass = document.getElementById('targetClassTest').value;
-        const btn = document.getElementById('bulkUploadBtn');
-        if(!chapName || !rawData) return alert("Fill details!");
-        btn.innerText = "⏳ Uploading...";
-        btn.disabled = true;
+        if(!chapName || !rawData) return alert("Missing details!");
         try {
             const questions = JSON.parse(rawData);
             const batch = db.batch();
@@ -132,9 +145,9 @@
                 batch.set(ref, { ...q, chapter: chapName, targetClass: targetClass, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
             });
             await batch.commit();
-            alert("Success!");
+            alert("Uploaded!");
             location.reload();
-        } catch(e) { alert("JSON Error!"); btn.innerText = "🚀 UPLOAD"; btn.disabled = false; }
+        } catch(e) { alert("JSON Error!"); }
     }
 
     function loadGroupedManager() {
@@ -150,21 +163,20 @@
             container.innerHTML = "";
             Object.keys(groups).forEach(chapter => {
                 const qList = groups[chapter];
-                const targetCls = qList[0].targetClass || "Needs Fix";
                 const chapterId = chapter.replace(/\s+/g, '');
                 container.innerHTML += `
                     <div class="chapter-box">
-                        <div class="class-tag">${targetCls}</div>
+                        <div class="class-tag">${qList[0].targetClass || '??'}</div>
                         <div style="display:flex; justify-content:space-between;">
-                            <b style="color:var(--primary)">📂 ${chapter}</b>
+                            <b style="color:var(--primary); font-size:14px;">📂 ${chapter}</b>
                             <span style="font-size:10px;">${qList.length} Qs</span>
                         </div>
                         <div style="margin-top:10px; display:flex; gap:5px;">
-                            <button class="btn-red" style="background:#444; flex:1;" onclick="toggleList('${chapterId}')">View</button>
+                            <button class="btn-red" style="background:#333; flex:1;" onclick="toggleList('${chapterId}')">View</button>
                             <button class="btn-red" style="flex:1;" onclick="deleteEntireChapter('${chapter}')">Delete All</button>
                         </div>
-                        <div id="list-${chapterId}" class="hidden" style="margin-top:15px; border-top:1px solid #333; padding-top:10px;">
-                            ${qList.map(q => `<div style="font-size:11px; margin-bottom:5px;">• ${q.question.substring(0,30)}...</div>`).join('')}
+                        <div id="list-${chapterId}" class="hidden" style="margin-top:10px; border-top:1px solid #333; padding-top:10px;">
+                            ${qList.map(q => `<div style="font-size:11px; margin-bottom:4px;">• ${q.question.substring(0,25)}...</div>`).join('')}
                         </div>
                     </div>`;
             });
@@ -177,7 +189,7 @@
     }
 
     async function deleteEntireChapter(chapName) {
-        if(!confirm("Delete full chapter?")) return;
+        if(!confirm("Delete this chapter?")) return;
         const snap = await db.collection("polls").where("chapter", "==", chapName).get();
         const batch = db.batch();
         snap.forEach(doc => batch.delete(doc.ref));
