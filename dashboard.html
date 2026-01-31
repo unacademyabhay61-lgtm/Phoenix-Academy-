@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phoenix Academy Dashboard</title>
-    <script src="https://meet.jit.si/external_api.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #0b0c0e; --card: #1c1f26; --primary: #3db2ff; --green: #2ecc71; --danger: #ff4444; }
@@ -13,16 +12,14 @@
         .header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a2d32; background: #0b0c0e; }
         .logo-text { font-weight: 800; font-size: 20px; color: #fff; }
 
-        /* SCHEDULED CLASS CARD */
         #upcoming-box { background: linear-gradient(135deg, #1e2128, #16181c); border: 1px solid #3db2ff44; border-radius: 18px; padding: 15px; margin: 10px 20px; display: none; }
         
-        /* LIVE BANNER UI */
         #live-banner { background: linear-gradient(90deg, #ff4444, #b30000); padding: 12px 20px; display: none; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 2px solid rgba(255,255,255,0.2); }
         .live-dot { height: 8px; width: 8px; background: #fff; border-radius: 50%; display: inline-block; margin-right: 5px; animation: blink 1s infinite; }
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
 
         #video-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: none; }
-        .close-video { position: absolute; top: 15px; right: 15px; background: var(--danger); border: none; color: #fff; padding: 10px 20px; border-radius: 12px; z-index: 2001; font-weight: bold; }
+        .close-video { position: absolute; top: 15px; right: 15px; background: var(--danger); border: none; color: #fff; padding: 10px 20px; border-radius: 12px; z-index: 2005; font-weight: bold; }
 
         .grid-menu { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 15px 20px; }
         .icon-box { background: var(--card); height: 55px; width: 55px; border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-size: 22px; border: 1px solid #2a2d32; transition: 0.3s; cursor: pointer; }
@@ -38,6 +35,9 @@
         .nav-bar { position: fixed; bottom: 0; width: 100%; background: #16181c; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #222; z-index: 1000; }
         .nav-item { color: #555; text-decoration: none; font-size: 11px; text-align: center; font-weight: bold; }
         .nav-item.active { color: #fff; }
+
+        /* Custom Chat Style */
+        #custom-chat-box { position: absolute; bottom: 0; width: 100%; height: 35%; background: #16181c; border-top: 2px solid #333; padding: 15px; box-sizing: border-box; z-index: 2001; }
     </style>
 </head>
 <body>
@@ -55,7 +55,17 @@
 
     <div id="video-overlay">
         <button class="close-video" onclick="closeLiveClass()">CLOSE ✕</button>
-        <div id="jitsi-container" style="height: 100%;"></div>
+        <div id="player-container" style="height: 65%; width: 100%; position: relative; overflow: hidden; background: #000;">
+            <div style="position:absolute; top:0; left:0; width:100%; height:60px; z-index:2002;"></div>
+            <div style="position:absolute; bottom:0; right:0; width:100px; height:50px; z-index:2002;"></div>
+            
+            <div id="youtube-embed-area" style="height: 100%; width: 100%;"></div>
+        </div>
+        
+        <div id="custom-chat-box">
+            <div style="color:var(--primary); font-size:12px; font-weight:800; margin-bottom:10px;">LIVE CHAT</div>
+            <div id="chat-content" style="color:#888; font-size:12px; font-style:italic;">Welcome to Phoenix Academy Live. Stay respectful in chat!</div>
+        </div>
     </div>
 
     <div class="header">
@@ -100,7 +110,6 @@
         let currentRoomID = "";
         const studentClass = localStorage.getItem("userClass") || "10th";
 
-        // 🟢 SYNC LIVE & SCHEDULED
         function syncClasses() {
             db.collection("current_live").doc(studentClass).onSnapshot((doc) => {
                 if (doc.exists && doc.data().status === "online") {
@@ -128,28 +137,20 @@
               });
         }
 
-        // 🏆 LOAD DATA FUNCTION (Tests, Notes, Videos)
         async function loadData(type) {
             const listDiv = document.getElementById('display-list');
             const titleDiv = document.getElementById('display-title');
-            
             const titles = { 'notes': '📚 Academic Notes', 'polls': '🏆 Chapter-wise Tests', 'playlist': '🎬 Video Lectures' };
             titleDiv.innerText = titles[type] || 'Content';
             listDiv.innerHTML = "<p style='text-align:center; color:#444;'>Syncing data...</p>";
-
             try {
-                const snap = await db.collection(type)
-                                    .where("targetClass", "==", studentClass)
-                                    .get();
-
+                const snap = await db.collection(type).where("targetClass", "==", studentClass).get();
                 if (snap.empty) {
-                    listDiv.innerHTML = "<p style='text-align:center; color:#555; font-size:12px;'>No content available for Class " + studentClass + " yet.</p>";
+                    listDiv.innerHTML = "<p style='text-align:center; color:#555; font-size:12px;'>No content available.</p>";
                     return;
                 }
-
                 let html = "";
                 let uniqueChapters = new Set();
-
                 snap.forEach(doc => {
                     const d = doc.data();
                     if (type === 'polls') {
@@ -168,29 +169,29 @@
                     }
                 });
                 listDiv.innerHTML = html;
-            } catch (e) {
-                listDiv.innerHTML = "<p style='text-align:center; color:var(--danger);'>Error loading data.</p>";
-                console.error(e);
-            }
+            } catch (e) { console.error(e); }
         }
 
+        // --- 🚀 NEW STEALTH JOIN LOGIC ---
         function joinLiveClass() {
             if(!currentRoomID) return;
             document.getElementById('video-overlay').style.display = 'block';
-            const options = {
-                roomName: currentRoomID,
-                width: '100%', height: '100%',
-                parentNode: document.querySelector('#jitsi-container'),
-                userInfo: { displayName: localStorage.getItem("userName") || 'Student' },
-                configOverwrite: { disableDeepLinking: true, startWithAudioMuted: true, startWithVideoMuted: true },
-                interfaceConfigOverwrite: { TOOLBAR_BUTTONS: ['chat', 'raisehand', 'hangup'] }
-            };
-            new JitsiMeetExternalAPI("meet.jit.si", options);
+            
+            // Masked YouTube Player Implementation
+            document.getElementById('youtube-embed-area').innerHTML = `
+                <iframe 
+                    width="100%" height="100%" 
+                    src="https://www.youtube-nocookie.com/embed/${currentRoomID}?autoplay=1&controls=0&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1" 
+                    frameborder="0" 
+                    allow="autoplay; encrypted-media" 
+                    style="pointer-events: none; transform: scale(1.15);">
+                </iframe>
+            `;
         }
 
         function closeLiveClass() {
             document.getElementById('video-overlay').style.display = 'none';
-            document.getElementById('jitsi-container').innerHTML = "";
+            document.getElementById('youtube-embed-area').innerHTML = "";
         }
 
         function loadMyPerformance() {
