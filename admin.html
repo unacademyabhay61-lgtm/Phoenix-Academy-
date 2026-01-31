@@ -20,6 +20,7 @@
         .res-card { background: #000; padding: 10px; border-radius: 12px; margin-bottom: 8px; border-left: 3px solid var(--notice); display: flex; justify-content: space-between; align-items: center; }
         .del-btn { color: var(--danger); background: none; border: none; font-size: 18px; cursor: pointer; }
         #live-container { width: 100%; height: 450px; border-radius: 20px; overflow: hidden; margin-top: 15px; display: none; border: 2px solid var(--danger); }
+        .scroll-box { max-height: 200px; overflow-y: auto; padding-right: 5px; }
     </style>
 </head>
 <body>
@@ -29,7 +30,7 @@
 
     <div class="admin-card" style="border-color: #ff4444;">
         <h3 style="color: #ff4444;">🔴 Live Class Studio</h3>
-        <label>Select Class</label>
+        <label>Select Target Class</label>
         <select id="liveClassTarget">
             <option value="9th">9th</option>
             <option value="10th">10th</option>
@@ -38,10 +39,12 @@
             <option value="NEET UG">NEET UG</option>
         </select>
         <label>Topic Name</label>
-        <input type="text" id="liveTopic" placeholder="e.g. Human Physiology">
+        <input type="text" id="liveTopic" placeholder="e.g. Molecular Basis of Inheritance">
         
-        <button class="btn btn-live" onclick="startInstantLive()">🚀 START TEACHER-ONLY LIVE</button>
-        <p style="text-align:center; font-size: 10px; color: #666;">--- OR SCHEDULE ---</p>
+        <button class="btn btn-live" onclick="startInstantLive()">🚀 GO LIVE NOW</button>
+        <button class="btn" style="background:#555; margin-bottom: 10px;" onclick="stopLive()">⏹ END CLASS</button>
+        
+        <p style="text-align:center; font-size: 10px; color: #666;">--- OR SCHEDULE FOR LATER ---</p>
         <input type="datetime-local" id="liveTime">
         <button class="btn" style="background:#333;" onclick="scheduleClass()">📅 SCHEDULE CLASS</button>
 
@@ -50,7 +53,12 @@
 
     <div class="admin-card" style="border-color: #555;">
         <h3>📅 Upcoming Schedule</h3>
-        <div id="schedule-list" style="font-size: 13px; color: #888;">Checking...</div>
+        <div id="schedule-list" class="scroll-box">Checking...</div>
+    </div>
+
+    <div class="admin-card" style="border-color: #9b59b6;">
+        <h3>📂 Manage Questions</h3>
+        <div id="questions-list" class="scroll-box">Loading...</div>
     </div>
 
     <div class="admin-card" style="border-color: var(--primary);">
@@ -69,7 +77,7 @@
 
     <div class="admin-card" style="border-color: var(--notice);">
         <h3>📊 Student Results</h3>
-        <div id="analytics-list">Loading...</div>
+        <div id="analytics-list" class="scroll-box">Loading...</div>
     </div>
 </div>
 
@@ -86,36 +94,42 @@
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.firestore();
 
+    // 🔴 1. Start Live (Signals the student app)
     async function startInstantLive() {
         const cls = document.getElementById('liveClassTarget').value;
         const topic = document.getElementById('liveTopic').value;
-        if(!topic) return alert("Bhai, Topic bhariye!");
+        if(!topic) return alert("Bhai, Topic toh dalo!");
 
-        const roomID = "PhoenixLive_" + cls + "_" + Math.floor(Math.random() * 10000);
+        const roomID = "Phoenix_" + cls.replace(/\s+/g, '') + "_" + Math.floor(Math.random()*1000);
         document.getElementById('live-container').style.display = "block";
 
         const options = {
             roomName: roomID, width: '100%', height: 450,
             parentNode: document.querySelector('#live-container'),
             userInfo: { displayName: 'Instructor (Phoenix Academy)' },
-            configOverwrite: {
-                disableDeepLinking: true, prejoinPageEnabled: false, enableWelcomePage: false,
-                startWithAudioMuted: false, startWithVideoMuted: false
-            },
-            interfaceConfigOverwrite: {
-                MOBILE_APP_PROMO: false,
-                TOOLBAR_BUTTONS: ['microphone', 'camera', 'desktop', 'chat', 'raisehand', 'hangup']
-            }
+            configOverwrite: { prejoinPageEnabled: false, enableWelcomePage: false },
+            interfaceConfigOverwrite: { TOOLBAR_BUTTONS: ['microphone', 'camera', 'desktop', 'chat', 'hangup'] }
         };
         new JitsiMeetExternalAPI("meet.jit.si", options);
 
+        // Update current_live so student's 'Join' button works
         await db.collection("current_live").doc(cls).set({
             topic: topic, roomID: roomID, status: "online",
             startTime: firebase.firestore.FieldValue.serverTimestamp()
         });
+        alert("Success: Bacha ab join kar sakta hai!");
     }
 
-    // UPDATED: Proper Timestamp for Planner Sync
+    // ⏹ 2. Stop Live
+    async function stopLive() {
+        const cls = document.getElementById('liveClassTarget').value;
+        await db.collection("current_live").doc(cls).update({ status: "offline" });
+        document.getElementById('live-container').innerHTML = "";
+        document.getElementById('live-container').style.display = "none";
+        alert("Class Ended!");
+    }
+
+    // 📅 3. Schedule Class
     async function scheduleClass() {
         const cls = document.getElementById('liveClassTarget').value;
         const topic = document.getElementById('liveTopic').value;
@@ -123,25 +137,36 @@
         if(!topic || !timeInput) return alert("Fill details!");
 
         await db.collection("live_classes").add({
-            targetClass: cls,
-            topic: topic,
-            time: timeInput, // HTML input time
-            status: "scheduled",
-            timestamp: firebase.firestore.FieldValue.serverTimestamp() // 👈 Sorting ke liye
+            targetClass: cls, topic: topic, time: timeInput,
+            status: "scheduled", timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
-        alert("Class Scheduled! Ab Planner check karein.");
+        alert("Scheduled successfully!");
     }
 
-    // NEW: Load Schedule in Admin
+    // 📋 4. Load Lists
     function loadSchedule() {
-        db.collection("live_classes").orderBy("timestamp", "desc").limit(5).onSnapshot(snap => {
+        db.collection("live_classes").orderBy("timestamp", "desc").limit(10).onSnapshot(snap => {
             const div = document.getElementById('schedule-list');
-            div.innerHTML = snap.empty ? "No classes scheduled." : "";
+            div.innerHTML = snap.empty ? "No classes." : "";
             snap.forEach(doc => {
                 const data = doc.data();
                 div.innerHTML += `<div class="res-card" style="border-left-color:var(--primary)">
                     <div><b>${data.topic}</b><br><small>${data.targetClass} | ${data.time}</small></div>
                     <button class="del-btn" onclick="deleteDoc('live_classes','${doc.id}')">✖</button>
+                </div>`;
+            });
+        });
+    }
+
+    function loadQuestions() {
+        db.collection("polls").orderBy("timestamp", "desc").limit(15).onSnapshot(snap => {
+            const div = document.getElementById('questions-list');
+            div.innerHTML = snap.empty ? "No questions." : "";
+            snap.forEach(doc => {
+                const q = doc.data();
+                div.innerHTML += `<div class="res-card" style="border-left-color:#9b59b6">
+                    <div><b>${q.chapter || 'Quiz'}</b><br><small>${q.targetClass} | ${q.question.substring(0,20)}...</small></div>
+                    <button class="del-btn" onclick="deleteDoc('polls','${doc.id}')">✖</button>
                 </div>`;
             });
         });
@@ -161,13 +186,13 @@
         });
     }
 
-    async function deleteDoc(col, id) { if(confirm("Khatam kar dein?")) await db.collection(col).doc(id).delete(); }
+    async function deleteDoc(col, id) { if(confirm("Delete confirm?")) await db.collection(col).doc(id).delete(); }
 
     async function uploadBulkQuiz() {
         const raw = document.getElementById('bulkJsonInput').value;
         const chap = document.getElementById('chapterNameInput').value;
         const cls = document.getElementById('targetClassTest').value;
-        if(!chap || !raw) return alert("Fill details!");
+        if(!chap || !raw) return alert("Details missing!");
         try {
             const qs = JSON.parse(raw);
             const batch = db.batch();
@@ -177,10 +202,11 @@
             });
             await batch.commit();
             alert("Uploaded!");
+            document.getElementById('bulkJsonInput').value = "";
         } catch(e) { alert("JSON Error!"); }
     }
 
-    window.onload = () => { loadAnalytics(); loadSchedule(); };
+    window.onload = () => { loadAnalytics(); loadSchedule(); loadQuestions(); };
 </script>
 </body>
 </html>
